@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>CELSeq Sample Sheet Generator</title>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h2>CELSeq Sample Sheet Generator</h2>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if download_link %}
+        <i>Collated FACS data:</i>
+        <a href="{{ url_for('uploaded_file', filename=download_link) }}">fcs_data.csv</a>
+        <br />
+    {% endif %}
+
+    {% if fcs_files %}
+    <i>Uploaded FACS Files</i>
+    <ul>
+        {% for fcs_file in fcs_files %}
+        <li>{{ fcs_file }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if xlsx_file %}
+    <i>Uploaded Spreadsheet</i>
+    {{ xlsx_file }}
+    {% endif %}
+
+    <form action="/" method="POST" enctype="multipart/form-data" class="mt-4">
+        <div class="form-group row">
+            <label for="operation" class="col-sm-2 col-form-label">Operation:</label>
+            <div class="col-sm-10">
+                <select name="operation" id="operation" class="form-control">
+                    <option value="plate_to_sheet">Plate layout to spreadsheet</option>
+                    <option value="fcs_collate">Collate FCS files</option>
+                    <option value="fcs_merge">Merge collated FCS file into spreadsheet</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="file" class="col-sm-2 col-form-label">FCS file(s)</label>
+            <div class="col-sm-10">
+                <input type="file" name="fcs_files" id="fcs_files" accept=".fcs" multiple class="form-control-file">
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="file" class="col-sm-2 col-form-label">Spreadsheet:</label>
+            <div class="col-sm-10">
+                <input type="file" name="xlsx_file" id="xlsx_file" accept=".xlsx" class="form-control-file">
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-sm-10 offset-sm-2">
+                <input type="submit" value="Submit" class="btn btn-primary">
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
