@@ -15,8 +15,13 @@
     {% endif %}
 
     {% if download_link %}
-        <i>Collated FACS data:</i>
-        <a href="{{ url_for('uploaded_file', filename=download_link) }}">fcs_data.csv</a>
+        {% if download_link.endswith('fcs_data.csv') %}
+        <i>Merged FACS data:</i>
+        {% endif %}
+        {% if download_link.endswith('samplesheet.tsv') %}
+        <i>Processed sample sheet:</i>
+        {% endif %}
+        <a href="{{ url_for('uploaded_file', filename=download_link) }}">{{ download_link.split('/')[-1] }}</a>
         <br />
     {% endif %}
 
@@ -39,7 +44,7 @@
             <label for="operation" class="col-sm-2 col-form-label">Operation:</label>
             <div class="col-sm-10">
                 <select name="operation" id="operation" class="form-control">
-                    <option value="plate_to_sheet">Plate layout to spreadsheet</option>
+                    <option value="plate_to_samplesheet">Plate layout to spreadsheet</option>
                     <option value="fcs_collate">Collate FCS files</option>
                     <option value="fcs_merge">Merge collated FCS file into spreadsheet</option>
                 </select>
