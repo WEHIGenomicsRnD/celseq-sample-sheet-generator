@@ -55,9 +55,9 @@ def get_plate_and_sample_from_filepath(fcs_filepath):
 
     return plate, sample_name
 
-def merge_fcs_files(fcs_files, upload_dir):
+def collate_fcs_files(fcs_files, upload_dir):
     '''
-    Merge FCS files into a single dataframe, adding columns for plate and sample name.
+    Collate FCS files into a single dataframe, adding columns for plate and sample name.
     '''
     fcs_data = pd.DataFrame()
 
@@ -112,7 +112,10 @@ def get_sample_list(sheet, sample_lookup, well_start_cell):
             if cell.fill.start_color.index != '00000000':
                 cell_colour = cell.fill.start_color.index
 
-                assert cell_colour in sample_lookup, 'Cell colour {} in cell {} not found in sample lookup in sheet {}'.format(cell_colour, cell.coordinate, sheet.title)
+                error_message = 'Cell colour {} in cell {} not found in sample lookup in sheet {}'.format(
+                    cell_colour, cell.coordinate, sheet.title
+                )
+                assert cell_colour in sample_lookup, error_message
                 samplename = sample_lookup[cell_colour]
             
             # get well ID
@@ -182,5 +185,20 @@ def plate_to_samplesheet(xlsx_file):
         samplesheet['plate'] = sheet.title
 
         full_samplesheet = pd.concat([full_samplesheet, samplesheet])
-    
+
+    # reorder columns
+    full_samplesheet = full_samplesheet[['plate', 'well_position', 'sample']]
     return full_samplesheet
+
+def merge_fcs_data_with_samplesheet(spreadsheet_filepath, fcs_file):
+    '''
+    Merge FCS data with samplesheet.
+    '''
+    # need to handle case of xlsx file here too
+    spreadsheet = pd.read_csv(spreadsheet_filepath, sep='\t')
+    fcs_data = pd.read_csv(fcs_file, sep='\t')
+
+    print(spreadsheet.head())
+    print(fcs_data.head())
+    merged = pd.merge(spreadsheet, fcs_data, on=['plate', 'sample', 'well_position'], how='left')
+    return merged

@@ -14,31 +14,6 @@
     </div>
     {% endif %}
 
-    {% if download_link %}
-        {% if download_link.endswith('fcs_data.csv') %}
-        <i>Merged FACS data:</i>
-        {% endif %}
-        {% if download_link.endswith('samplesheet.tsv') %}
-        <i>Processed sample sheet:</i>
-        {% endif %}
-        <a href="{{ url_for('uploaded_file', filename=download_link) }}">{{ download_link.split('/')[-1] }}</a>
-        <br />
-    {% endif %}
-
-    {% if fcs_files %}
-    <i>Uploaded FACS Files</i>
-    <ul>
-        {% for fcs_file in fcs_files %}
-        <li>{{ fcs_file }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-
-    {% if xlsx_file %}
-    <i>Uploaded Spreadsheet</i>
-    {{ xlsx_file }}
-    {% endif %}
-
     <form action="/" method="POST" enctype="multipart/form-data" class="mt-4">
         <div class="form-group row">
             <label for="operation" class="col-sm-2 col-form-label">Operation:</label>
@@ -59,7 +34,7 @@
         <div class="form-group row">
             <label for="file" class="col-sm-2 col-form-label">Spreadsheet:</label>
             <div class="col-sm-10">
-                <input type="file" name="xlsx_file" id="xlsx_file" accept=".xlsx" class="form-control-file">
+                <input type="file" name="spreadsheet" id="spreadsheet" accept=".xlsx, .csv, .tsv" class="form-control-file">
             </div>
         </div>
         <div class="form-group row">
@@ -68,5 +43,31 @@
             </div>
         </div>
     </form>
+
+    {% if download_link %}
+    {% if download_link.endswith('fcs_data.tsv') %}
+    <i>Merged FACS data:</i>
+    {% endif %}
+    {% if download_link.endswith('samplesheet.tsv') or download_link.endswith('merged.tsv') %}
+    <i>Processed sample sheet:</i>
+    {% endif %}
+    <a href="{{ url_for('uploaded_file', filename=download_link) }}">{{ download_link.split('/')[-1] }}</a>
+    <br />
+    {% endif %}
+
+    {% if fcs_files %}
+    <i>Uploaded FACS Files</i>
+    <ul>
+        {% for fcs_file in fcs_files %}
+        <li>{{ fcs_file }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if spreadsheet %}
+    <i>Uploaded Spreadsheet</i>
+    {{ spreadsheet }}
+    {% endif %}
+
 </div>
 {% endblock %}
