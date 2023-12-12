@@ -1,9 +1,9 @@
-from flask import Flask, request, render_template, send_from_directory
-from operations import collate_fcs_files, plate_to_samplesheet, merge_fcs_data_with_samplesheet
+from flask import Flask, request, session, render_template, send_from_directory
 from werkzeug.utils import secure_filename
+from operations import collate_fcs_files, plate_to_samplesheet, merge_fcs_data_with_samplesheet
 
-import pandas as pd
 import os
+import tempfile
 
 UPLOAD_FOLDER = 'uploads'
 COLLATED_FCS_FILENAME = 'fcs_data.tsv'
@@ -13,17 +13,18 @@ MERGED_FILENAME = 'merged.tsv'
 uploaded_sample_sheet = None
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'fallback_if_not_found')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def render_index(fcs_files=None, plate_spreadsheet=None, sample_sheet=None, error=None):
 
     collated_fcs_file, samplesheet_file, merged_file = None, None, None
-    collated_fcs_path = os.path.join(app.config['UPLOAD_FOLDER'], COLLATED_FCS_FILENAME)
-    merged_path = os.path.join(app.config['UPLOAD_FOLDER'], MERGED_FILENAME)
+    collated_fcs_path = os.path.join(session['upload_dir'], COLLATED_FCS_FILENAME)
+    merged_path = os.path.join(session['upload_dir'], MERGED_FILENAME)
     if uploaded_sample_sheet:
-        samplesheet_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_sample_sheet)
+        samplesheet_path = os.path.join(session['upload_dir'], uploaded_sample_sheet)
     else:
-        samplesheet_path = os.path.join(app.config['UPLOAD_FOLDER'], SAMPLESHEET_FILENAME)
+        samplesheet_path = os.path.join(session['upload_dir'], SAMPLESHEET_FILENAME)
 
     if os.path.exists(collated_fcs_path):
         collated_fcs_file = COLLATED_FCS_FILENAME
@@ -45,12 +46,12 @@ def handle_plate_to_samplesheet(plate_spreadsheet):
     if not plate_spreadsheet:
         return render_index(error='Please upload a plate spreadsheet')
 
-    plate_spreadsheet_filepath = os.path.join(app.config['UPLOAD_FOLDER'], plate_spreadsheet.filename)
+    plate_spreadsheet_filepath = os.path.join(session['upload_dir'], plate_spreadsheet.filename)
     plate_spreadsheet.save(plate_spreadsheet_filepath)
     samplesheet = plate_to_samplesheet(plate_spreadsheet_filepath)
 
     # initiate download of csv file for user
-    samplesheet_outpath = os.path.join(app.config['UPLOAD_FOLDER'], SAMPLESHEET_FILENAME)
+    samplesheet_outpath = os.path.join(session['upload_dir'], SAMPLESHEET_FILENAME)
     samplesheet.to_csv(samplesheet_outpath, index=False, sep='\t')
     return render_index(plate_spreadsheet=plate_spreadsheet) 
 
@@ -59,18 +60,18 @@ def handle_fcs_collate(fcs_files):
         return render_index(error='Please upload at least one FACS file')
     
     for fcs_file in fcs_files:
-        fcs_file.save(os.path.join(app.config['UPLOAD_FOLDER'], fcs_file.filename))
+        fcs_file.save(os.path.join(session['upload_dir'], fcs_file.filename))
 
-    fcs_data = collate_fcs_files(fcs_files, app.config['UPLOAD_FOLDER'])
+    fcs_data = collate_fcs_files(fcs_files, session['upload_dir'])
 
     # initiate download of csv file for user
-    fcs_data_output = os.path.join(app.config['UPLOAD_FOLDER'], COLLATED_FCS_FILENAME)
+    fcs_data_output = os.path.join(session['upload_dir'], COLLATED_FCS_FILENAME)
     fcs_data.to_csv(fcs_data_output, index=False, sep='\t')
     return render_index(fcs_files=fcs_files)
 
 def handle_fcs_merge(sample_sheet):
-    fcs_file = os.path.join(app.config['UPLOAD_FOLDER'], COLLATED_FCS_FILENAME)
-    sample_sheet_filepath = os.path.join(app.config['UPLOAD_FOLDER'], SAMPLESHEET_FILENAME)
+    fcs_file = os.path.join(session['upload_dir'], COLLATED_FCS_FILENAME)
+    sample_sheet_filepath = os.path.join(session['upload_dir'], SAMPLESHEET_FILENAME)
 
     if not sample_sheet and not os.path.exists(sample_sheet_filepath):
         return render_index(error='Please upload a sample sheet')
@@ -79,12 +80,12 @@ def handle_fcs_merge(sample_sheet):
     
     if sample_sheet:
         uploaded_sample_sheet = secure_filename(sample_sheet.filename)
-        sample_sheet_filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_sample_sheet)
+        sample_sheet_filepath = os.path.join(session['upload_dir'], uploaded_sample_sheet)
         sample_sheet.save(sample_sheet_filepath)
 
     merged = merge_fcs_data_with_samplesheet(sample_sheet_filepath, fcs_file)
 
-    merged_outpath = os.path.join(app.config['UPLOAD_FOLDER'], MERGED_FILENAME)
+    merged_outpath = os.path.join(session['upload_dir'], MERGED_FILENAME)
     merged.to_csv(merged_outpath, index=False, sep='\t')
     return render_index(sample_sheet=sample_sheet)
 
@@ -93,7 +94,7 @@ def delete_file():
     filename = request.form.get('filename')
     if filename:
         filename = secure_filename(filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file_path = os.path.join(session['upload_dir'], filename)
         if os.path.exists(file_path):
             os.remove(file_path)
     return render_index()
@@ -101,10 +102,13 @@ def delete_file():
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     filename = secure_filename(filename)
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    return send_from_directory(session['upload_dir'], filename)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    if 'upload_dir' not in session:
+        session['upload_dir'] = tempfile.mkdtemp(dir=app.config['UPLOAD_FOLDER'])
+
     if request.method == 'POST':
         operation = request.form['operation']
 
@@ -112,7 +116,7 @@ def index():
         plate_spreadsheet = request.files['plate_spreadsheet']
         sample_sheet = request.files['sample_sheet']
 
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        os.makedirs(session['upload_dir'], exist_ok=True)
 
         if operation == 'plate_to_samplesheet':
             return handle_plate_to_samplesheet(plate_spreadsheet)
