@@ -66,15 +66,37 @@
         </div>
     </form>
 
-    {% if download_link %}
-    {% if download_link.endswith('fcs_data.tsv') %}
-    <i>Merged FACS data:</i>
-    {% endif %}
-    {% if download_link.endswith('samplesheet.tsv') or download_link.endswith('merged.tsv') %}
-    <i>Processed sample sheet:</i>
-    {% endif %}
-    <a href="{{ url_for('uploaded_file', filename=download_link) }}">{{ download_link.split('/')[-1] }}</a>
-    <br />
+    {% if collated_fcs_file or samplesheet_file or merged_file %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Output Type</th>
+                <th>File</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if collated_fcs_file %}
+            <tr>
+                <td>Merged FACS data</td>
+                <td><a href="{{ url_for('uploaded_file', filename=collated_fcs_file) }}">{{ collated_fcs_file.split('/')[-1] }}</a></td>
+            </tr>
+            {% endif %}
+
+            {% if samplesheet_file %}
+            <tr>
+                <td>Sample sheet</td>
+                <td><a href="{{ url_for('uploaded_file', filename=samplesheet_file) }}">{{ samplesheet_file.split('/')[-1] }}</a></td>
+            </tr>
+            {% endif %}
+
+            {% if merged_file %}
+            <tr>
+                <td>Merged sample sheet</td>
+                <td><a href="{{ url_for('uploaded_file', filename=merged_file) }}">{{ merged_file.split('/')[-1] }}</a></td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
     {% endif %}
 
 </div>

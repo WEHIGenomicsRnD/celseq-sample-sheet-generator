@@ -13,12 +13,27 @@ COLLATED_FCS_FILENAME = 'fcs_data.tsv'
 SAMPLESHEET_FILENAME = 'samplesheet.tsv'
 MERGED_FILENAME = 'merged.tsv'
 
-def render_index(fcs_files=None, plate_spreadsheet=None, sample_sheet=None, download_link=None, error=None):
+def render_index(fcs_files=None, plate_spreadsheet=None, sample_sheet=None, error=None):
+
+    collated_fcs_file, samplesheet_file, merged_file = None, None, None
+    collated_fcs_path = os.path.join(app.config['UPLOAD_FOLDER'], COLLATED_FCS_FILENAME)
+    samplesheet_path = os.path.join(app.config['UPLOAD_FOLDER'], SAMPLESHEET_FILENAME)
+    merged_path = os.path.join(app.config['UPLOAD_FOLDER'], MERGED_FILENAME)
+
+    if os.path.exists(collated_fcs_path):
+        collated_fcs_file = COLLATED_FCS_FILENAME
+    if os.path.exists(samplesheet_path):
+        samplesheet_file = SAMPLESHEET_FILENAME
+    if os.path.exists(merged_path):
+        merged_file = MERGED_FILENAME
+
     return render_template('index.html',
                            fcs_files=fcs_files,
                            plate_spreadsheet=plate_spreadsheet,
                            sample_sheet=sample_sheet,
-                           download_link=download_link,
+                           collated_fcs_file=collated_fcs_file,
+                           samplesheet_file=samplesheet_file,
+                           merged_file=merged_file,
                            error=error)
 
 def handle_plate_to_samplesheet(plate_spreadsheet):
@@ -32,7 +47,7 @@ def handle_plate_to_samplesheet(plate_spreadsheet):
     # initiate download of csv file for user
     samplesheet_outpath = os.path.join(app.config['UPLOAD_FOLDER'], SAMPLESHEET_FILENAME)
     samplesheet.to_csv(samplesheet_outpath, index=False, sep='\t')
-    return render_index(plate_spreadsheet=plate_spreadsheet, download_link=SAMPLESHEET_FILENAME) 
+    return render_index(plate_spreadsheet=plate_spreadsheet) 
 
 def handle_fcs_collate(fcs_files):
     if len(fcs_files) == 0:
@@ -46,7 +61,7 @@ def handle_fcs_collate(fcs_files):
     # initiate download of csv file for user
     fcs_data_output = os.path.join(app.config['UPLOAD_FOLDER'], COLLATED_FCS_FILENAME)
     fcs_data.to_csv(fcs_data_output, index=False, sep='\t')
-    return render_index(fcs_files=fcs_files, download_link=COLLATED_FCS_FILENAME)
+    return render_index(fcs_files=fcs_files)
 
 def handle_fcs_merge(sample_sheet):
     fcs_file = os.path.join(app.config['UPLOAD_FOLDER'], COLLATED_FCS_FILENAME)
@@ -58,14 +73,14 @@ def handle_fcs_merge(sample_sheet):
         return render_index(error='Please collate your FACS data first!')
     
     if sample_sheet:
-        sample_sheet.save(sample_sheet_filepath)
         sample_sheet_filepath = os.path.join(app.config['UPLOAD_FOLDER'], sample_sheet.filename)
+        sample_sheet.save(sample_sheet_filepath)
 
     merged = merge_fcs_data_with_samplesheet(sample_sheet_filepath, fcs_file)
 
     merged_outpath = os.path.join(app.config['UPLOAD_FOLDER'], MERGED_FILENAME)
     merged.to_csv(merged_outpath, index=False, sep='\t')
-    return render_index(sample_sheet=sample_sheet, download_link=MERGED_FILENAME)
+    return render_index(sample_sheet=sample_sheet)
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
