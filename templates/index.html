@@ -26,37 +26,21 @@
             </div>
         </div>
         <div class="form-group row">
-            <label for="file" class="col-sm-2 col-form-label">FCS file(s)</label>
-            <div class="col-sm-10">
-                <input type="file" name="fcs_files" id="fcs_files" accept=".fcs" multiple class="form-control-file">
-                {% if fcs_files %}
-                <i>Uploaded:</i>
-                <ul>
-                    {% for fcs_file in fcs_files %}
-                    <li>{{ fcs_file }}</li>
-                    {% endfor %}
-                </ul> 
-                {% endif %}
-            </div>
-        </div>
-        <div class="form-group row">
             <label for="file" class="col-sm-2 col-form-label">Plate spreadsheet:</label>
             <div class="col-sm-10">
                 <input type="file" name="plate_spreadsheet" id="plate_spreadsheet" accept=".xlsx" class="form-control-file">
-                {% if plate_spreadsheet %}
-                <i>Uploaded:</i>
-                {{ plate_spreadsheet }}
-                {% endif %}
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="file" class="col-sm-2 col-form-label">FCS file(s)</label>
+            <div class="col-sm-10">
+                <input type="file" name="fcs_files" id="fcs_files" accept=".fcs" multiple class="form-control-file">
             </div>
         </div>
         <div class="form-group row">
             <label for="file" class="col-sm-2 col-form-label">Sample sheet:</label>
             <div class="col-sm-10">
                 <input type="file" name="sample_sheet" id="sample_sheet" accept=".xlsx, .csv, .tsv" class="form-control-file">
-                {% if sample_sheet %}
-                <i>Uploaded:</i>
-                {{ sample_sheet }}
-                {% endif %}
             </div>
         </div>
         <div class="form-group row">
@@ -72,6 +56,7 @@
             <tr>
                 <th>Output Type</th>
                 <th>File</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
@@ -79,6 +64,12 @@
             <tr>
                 <td>Merged FACS data</td>
                 <td><a href="{{ url_for('uploaded_file', filename=collated_fcs_file) }}">{{ collated_fcs_file.split('/')[-1] }}</a></td>
+                <td>
+                    <form action="{{ url_for('delete_file') }}" method="POST">
+                        <input type="hidden" name="filename" value="{{ collated_fcs_file }}">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </td>
             </tr>
             {% endif %}
 
@@ -86,6 +77,12 @@
             <tr>
                 <td>Sample sheet</td>
                 <td><a href="{{ url_for('uploaded_file', filename=samplesheet_file) }}">{{ samplesheet_file.split('/')[-1] }}</a></td>
+                <td>
+                    <form action="{{ url_for('delete_file') }}" method="POST">
+                        <input type="hidden" name="filename" value="{{ samplesheet_file }}">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </td>
             </tr>
             {% endif %}
 
@@ -93,6 +90,12 @@
             <tr>
                 <td>Merged sample sheet</td>
                 <td><a href="{{ url_for('uploaded_file', filename=merged_file) }}">{{ merged_file.split('/')[-1] }}</a></td>
+                <td>
+                    <form action="{{ url_for('delete_file') }}" method="POST">
+                        <input type="hidden" name="filename" value="{{ merged_file }}">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </td>
             </tr>
             {% endif %}
         </tbody>

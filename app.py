@@ -1,24 +1,29 @@
 from flask import Flask, request, render_template, send_from_directory
 from operations import collate_fcs_files, plate_to_samplesheet, merge_fcs_data_with_samplesheet
+from werkzeug.utils import secure_filename
 
 import pandas as pd
 import os
 
 UPLOAD_FOLDER = 'uploads'
-
-app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
 COLLATED_FCS_FILENAME = 'fcs_data.tsv'
 SAMPLESHEET_FILENAME = 'samplesheet.tsv'
 MERGED_FILENAME = 'merged.tsv'
+
+uploaded_sample_sheet = None
+
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def render_index(fcs_files=None, plate_spreadsheet=None, sample_sheet=None, error=None):
 
     collated_fcs_file, samplesheet_file, merged_file = None, None, None
     collated_fcs_path = os.path.join(app.config['UPLOAD_FOLDER'], COLLATED_FCS_FILENAME)
-    samplesheet_path = os.path.join(app.config['UPLOAD_FOLDER'], SAMPLESHEET_FILENAME)
     merged_path = os.path.join(app.config['UPLOAD_FOLDER'], MERGED_FILENAME)
+    if uploaded_sample_sheet:
+        samplesheet_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_sample_sheet)
+    else:
+        samplesheet_path = os.path.join(app.config['UPLOAD_FOLDER'], SAMPLESHEET_FILENAME)
 
     if os.path.exists(collated_fcs_path):
         collated_fcs_file = COLLATED_FCS_FILENAME
@@ -73,7 +78,8 @@ def handle_fcs_merge(sample_sheet):
         return render_index(error='Please collate your FACS data first!')
     
     if sample_sheet:
-        sample_sheet_filepath = os.path.join(app.config['UPLOAD_FOLDER'], sample_sheet.filename)
+        uploaded_sample_sheet = secure_filename(sample_sheet.filename)
+        sample_sheet_filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_sample_sheet)
         sample_sheet.save(sample_sheet_filepath)
 
     merged = merge_fcs_data_with_samplesheet(sample_sheet_filepath, fcs_file)
@@ -82,8 +88,19 @@ def handle_fcs_merge(sample_sheet):
     merged.to_csv(merged_outpath, index=False, sep='\t')
     return render_index(sample_sheet=sample_sheet)
 
+@app.route('/delete_file', methods=['POST'])
+def delete_file():
+    filename = request.form.get('filename')
+    if filename:
+        filename = secure_filename(filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    return render_index()
+
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
+    filename = secure_filename(filename)
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/', methods=['GET', 'POST'])
