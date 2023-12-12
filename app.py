@@ -13,21 +13,26 @@ COLLATED_FCS_FILENAME = 'fcs_data.tsv'
 SAMPLESHEET_FILENAME = 'samplesheet.tsv'
 MERGED_FILENAME = 'merged.tsv'
 
-def render_index(fcs_files=None, spreadsheet=None, download_link=None, error=None):
-    return render_template('index.html', fcs_files=fcs_files, spreadsheet=spreadsheet, download_link=download_link, error=error)
+def render_index(fcs_files=None, plate_spreadsheet=None, sample_sheet=None, download_link=None, error=None):
+    return render_template('index.html',
+                           fcs_files=fcs_files,
+                           plate_spreadsheet=plate_spreadsheet,
+                           sample_sheet=sample_sheet,
+                           download_link=download_link,
+                           error=error)
 
-def handle_plate_to_samplesheet(spreadsheet):
-    if not spreadsheet:
-        return render_index(error='Please upload a spreadsheet')
+def handle_plate_to_samplesheet(plate_spreadsheet):
+    if not plate_spreadsheet:
+        return render_index(error='Please upload a plate spreadsheet')
 
-    spreadsheet_filepath = os.path.join(app.config['UPLOAD_FOLDER'], spreadsheet.filename)
-    spreadsheet.save(spreadsheet_filepath)
-    samplesheet = plate_to_samplesheet(spreadsheet_filepath)
+    plate_spreadsheet_filepath = os.path.join(app.config['UPLOAD_FOLDER'], plate_spreadsheet.filename)
+    plate_spreadsheet.save(plate_spreadsheet_filepath)
+    samplesheet = plate_to_samplesheet(plate_spreadsheet_filepath)
 
     # initiate download of csv file for user
     samplesheet_outpath = os.path.join(app.config['UPLOAD_FOLDER'], SAMPLESHEET_FILENAME)
     samplesheet.to_csv(samplesheet_outpath, index=False, sep='\t')
-    return render_index(spreadsheet=spreadsheet, download_link=SAMPLESHEET_FILENAME) 
+    return render_index(plate_spreadsheet=plate_spreadsheet, download_link=SAMPLESHEET_FILENAME) 
 
 def handle_fcs_collate(fcs_files):
     if len(fcs_files) == 0:
@@ -43,20 +48,24 @@ def handle_fcs_collate(fcs_files):
     fcs_data.to_csv(fcs_data_output, index=False, sep='\t')
     return render_index(fcs_files=fcs_files, download_link=COLLATED_FCS_FILENAME)
 
-def handle_fcs_merge(spreadsheet):
+def handle_fcs_merge(sample_sheet):
     fcs_file = os.path.join(app.config['UPLOAD_FOLDER'], COLLATED_FCS_FILENAME)
-    if not spreadsheet:
-        return render_index(error='Please upload a spreadsheet')
+    sample_sheet_filepath = os.path.join(app.config['UPLOAD_FOLDER'], SAMPLESHEET_FILENAME)
+
+    if not sample_sheet and not os.path.exists(sample_sheet_filepath):
+        return render_index(error='Please upload a sample sheet')
     if not os.path.exists(fcs_file):
         return render_index(error='Please collate your FACS data first!')
     
-    spreadsheet_filepath = os.path.join(app.config['UPLOAD_FOLDER'], spreadsheet.filename)
-    spreadsheet.save(spreadsheet_filepath)
-    merged = merge_fcs_data_with_samplesheet(spreadsheet_filepath, fcs_file)
+    if sample_sheet:
+        sample_sheet.save(sample_sheet_filepath)
+        sample_sheet_filepath = os.path.join(app.config['UPLOAD_FOLDER'], sample_sheet.filename)
+
+    merged = merge_fcs_data_with_samplesheet(sample_sheet_filepath, fcs_file)
 
     merged_outpath = os.path.join(app.config['UPLOAD_FOLDER'], MERGED_FILENAME)
     merged.to_csv(merged_outpath, index=False, sep='\t')
-    return render_index(spreadsheet=spreadsheet, download_link=MERGED_FILENAME)
+    return render_index(sample_sheet=sample_sheet, download_link=MERGED_FILENAME)
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -68,16 +77,17 @@ def index():
         operation = request.form['operation']
 
         fcs_files = request.files.getlist('fcs_files')
-        spreadsheet = request.files['spreadsheet']
+        plate_spreadsheet = request.files['plate_spreadsheet']
+        sample_sheet = request.files['sample_sheet']
 
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
         if operation == 'plate_to_samplesheet':
-            return handle_plate_to_samplesheet(spreadsheet)
+            return handle_plate_to_samplesheet(plate_spreadsheet)
         elif operation == 'fcs_collate':
             return handle_fcs_collate(fcs_files)
         elif operation == 'fcs_merge':
-            return handle_fcs_merge(spreadsheet)
+            return handle_fcs_merge(sample_sheet)
     else:
         return render_index()
 

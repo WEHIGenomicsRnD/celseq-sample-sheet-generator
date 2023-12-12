@@ -198,7 +198,5 @@ def merge_fcs_data_with_samplesheet(spreadsheet_filepath, fcs_file):
     spreadsheet = pd.read_csv(spreadsheet_filepath, sep='\t')
     fcs_data = pd.read_csv(fcs_file, sep='\t')
 
-    print(spreadsheet.head())
-    print(fcs_data.head())
     merged = pd.merge(spreadsheet, fcs_data, on=['plate', 'sample', 'well_position'], how='left')
     return merged
