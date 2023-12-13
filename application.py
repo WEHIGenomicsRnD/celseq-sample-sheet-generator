@@ -12,9 +12,9 @@ MERGED_FILENAME = 'merged.tsv'
 
 uploaded_sample_sheet = None
 
-app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'fallback_if_not_found')
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+application = Flask(__name__)
+application.secret_key = os.environ.get('SECRET_KEY', 'fallback_if_not_found')
+application.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def render_index(fcs_files=None, plate_spreadsheet=None, sample_sheet=None, error=None):
 
@@ -89,7 +89,7 @@ def handle_fcs_merge(sample_sheet):
     merged.to_csv(merged_outpath, index=False, sep='\t')
     return render_index(sample_sheet=sample_sheet)
 
-@app.route('/delete_file', methods=['POST'])
+@application.route('/delete_file', methods=['POST'])
 def delete_file():
     filename = request.form.get('filename')
     if filename:
@@ -99,15 +99,15 @@ def delete_file():
             os.remove(file_path)
     return render_index()
 
-@app.route('/uploads/<filename>')
+@application.route('/uploads/<filename>')
 def uploaded_file(filename):
     filename = secure_filename(filename)
     return send_from_directory(session['upload_dir'], filename)
 
-@app.route('/', methods=['GET', 'POST'])
+@application.route('/', methods=['GET', 'POST'])
 def index():
     if 'upload_dir' not in session:
-        session['upload_dir'] = tempfile.mkdtemp(dir=app.config['UPLOAD_FOLDER'])
+        session['upload_dir'] = tempfile.mkdtemp(dir=application.config['UPLOAD_FOLDER'])
 
     if request.method == 'POST':
         operation = request.form['operation']
@@ -128,4 +128,4 @@ def index():
         return render_index()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    application.run(debug=True)
