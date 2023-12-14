@@ -1,4 +1,5 @@
 from flask import Flask, request, session, render_template, send_from_directory
+from flask_httpauth import HTTPBasicAuth
 from werkzeug.utils import secure_filename
 from operations import collate_fcs_files, plate_to_samplesheet, merge_fcs_data_with_samplesheet
 
@@ -16,8 +17,16 @@ application = Flask(__name__)
 application.secret_key = os.environ.get('SECRET_KEY', 'fallback_if_not_found')
 application.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-def render_index(fcs_files=None, plate_spreadsheet=None, sample_sheet=None, error=None):
+auth = HTTPBasicAuth()
+app_password = os.environ.get('APP_PASSWORD', 'fallback_if_not_found')
 
+@auth.verify_password
+def verify_password(username, password):
+    if username == 'user' and password == app_password:
+        return True
+    return False
+
+def render_index(fcs_files=None, plate_spreadsheet=None, sample_sheet=None, error=None):
     collated_fcs_file, samplesheet_file, merged_file = None, None, None
     collated_fcs_path = os.path.join(session['upload_dir'], COLLATED_FCS_FILENAME)
     merged_path = os.path.join(session['upload_dir'], MERGED_FILENAME)
@@ -56,7 +65,7 @@ def handle_plate_to_samplesheet(plate_spreadsheet):
     return render_index(plate_spreadsheet=plate_spreadsheet) 
 
 def handle_fcs_collate(fcs_files):
-    if len(fcs_files) == 0:
+    if len(fcs_files) == 0 or fcs_files[0].filename == '':
         return render_index(error='Please upload at least one FACS file')
     
     for fcs_file in fcs_files:
@@ -90,6 +99,7 @@ def handle_fcs_merge(sample_sheet):
     return render_index(sample_sheet=sample_sheet)
 
 @application.route('/delete_file', methods=['POST'])
+@auth.login_required
 def delete_file():
     filename = request.form.get('filename')
     if filename:
@@ -100,11 +110,13 @@ def delete_file():
     return render_index()
 
 @application.route('/uploads/<filename>')
+@auth.login_required
 def uploaded_file(filename):
     filename = secure_filename(filename)
     return send_from_directory(session['upload_dir'], filename)
 
 @application.route('/', methods=['GET', 'POST'])
+@auth.login_required
 def index():
     if 'upload_dir' not in session:
         session['upload_dir'] = tempfile.mkdtemp(dir=application.config['UPLOAD_FOLDER'])

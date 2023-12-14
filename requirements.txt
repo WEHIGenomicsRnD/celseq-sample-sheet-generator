@@ -9,6 +9,7 @@ exceptiongroup
 executing
 fcsparser
 Flask
+Flask-HTTPAuth
 importlib-metadata
 ipykernel
 ipython
