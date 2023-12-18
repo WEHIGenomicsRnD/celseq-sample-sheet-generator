@@ -190,12 +190,36 @@ def plate_to_samplesheet(xlsx_file):
     full_samplesheet = full_samplesheet[['plate', 'well_position', 'sample']]
     return full_samplesheet
 
+def load_excel_samplesheet(filepath):
+    '''
+    Load excel spreadsheet samplesheet and check it has a 'samples' sheet.
+    Locate the first row and then load and return the data as a pandas dataframe.
+    '''
+    wb = openpyxl.load_workbook(filepath)
+    assert sum([sheet.lower().startswith('sample') for sheet in wb.sheetnames]) == 1, 'Could not find samples sheet in template file'
+
+    samples_sheet_name = [sheet for sheet in wb.sheetnames if sheet.lower().startswith('sample')][0]
+
+    first_row, found_row = 1, False
+    for row in wb[samples_sheet_name].iter_rows():
+        if row[0].value and row[0].value.lower().startswith('plate'):
+            found_row = True
+            break
+        first_row += 1
+    assert found_row, 'Could not find header row in template file'
+
+    samplesheet = pd.read_excel(filepath, sheet_name=samples_sheet_name, header=first_row - 1)
+
+    assert 'Plate#' in samplesheet.columns, 'Could not find Plate# column in template file'
+    assert 'Well position' in samplesheet.columns, 'Could not find Well position column in template file'
+
+    return samplesheet
+
 def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file, template_sheet_filepath):
     '''
     Merges processed/uploaded data (may be sample sheet and/or fcs data).
     Will merge into a template if provided.
     '''
-    spreadsheet = pd.read_csv(spreadsheet_filepath, sep='\t')
     fcs_data = pd.read_csv(fcs_file, sep='\t') if fcs_file else None
     is_xlsx = spreadsheet_filepath.endswith('.xlsx')
     merged_data = pd.DataFrame()
@@ -203,24 +227,8 @@ def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file, template_sheet_f
     if template_sheet_filepath and is_xlsx:
         raise Exception('Cannot merge template sheet with xlsx file. Please upload a tsv file with plate, sample and well positions.')
     elif template_sheet_filepath:
-        wb = openpyxl.load_workbook(template_sheet_filepath)
-        assert sum([sheet.lower().startswith('samples') for sheet in wb.sheetnames]) == 1, 'Could not find samples sheet in template file'
-
-        samples_sheet_name = [sheet for sheet in wb.sheetnames if sheet.lower().startswith('samples')][0]
-
-        first_row, found_row = 1, False
-        for row in wb[samples_sheet_name].iter_rows():
-            if row[0].value and row[0].value.lower().startswith('plate'):
-                found_row = True
-                break
-            first_row += 1
-        assert found_row, 'Could not find header row in template file'
-
-        template = pd.read_excel(template_sheet_filepath, sheet_name=samples_sheet_name, header=first_row - 1)
-
-        assert 'Plate#' in template.columns, 'Could not find Plate# column in template file'
-        assert 'Well position' in template.columns, 'Could not find Well position column in template file'
-
+        template = load_excel_samplesheet(template_sheet_filepath)
+        spreadsheet = pd.read_csv(spreadsheet_filepath, sep='\t')
         for plate in spreadsheet.plate.unique():
             plate_data = template.copy()
             plate_data['Plate#'] = plate
@@ -228,15 +236,19 @@ def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file, template_sheet_f
                                   left_on=['Plate#', 'Well position'],
                                   right_on=['plate', 'well_position'], how='left')
             merged_data = pd.concat([merged_data, plate_data])
-    else:
-        merged_data = spreadsheet
+    elif not is_xlsx:
+        merged_data = pd.read_csv(spreadsheet_filepath, sep='\t')
 
     if fcs_data is None:
         return merged_data
     
     if is_xlsx:
-        return pd.merge(merged_data, fcs_data, 
-                               left_on=['Plate#', 'Well position', 'Sample name'],
-                               right_on=['plate', 'well_position', 'sample'], how='left')
+        spreadsheet = load_excel_samplesheet(spreadsheet_filepath)
+        samples_colname = [col for col in spreadsheet.columns if col.lower() == 'sample' or col.lower() == 'sample name'][0]
+        print(spreadsheet.head())
+        print(fcs_data.head())
+        return pd.merge(spreadsheet, fcs_data, 
+                        left_on=['Plate#', 'Well position', samples_colname],
+                        right_on=['plate', 'well_position', 'sample'], how='left')
     else:
         return pd.merge(merged_data, fcs_data, on=['plate', 'sample', 'well_position'], how='left')

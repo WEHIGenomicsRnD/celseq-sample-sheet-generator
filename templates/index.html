@@ -108,5 +108,19 @@
     </table>
     {% endif %}
 
+    <hr>
+    <h3>Operations</h3>
+    <ul>
+        <li>
+            <strong>Plate layout to spreadsheet:</strong> handles the conversion of a plate layout to a sample sheet. Upload a colour-coded plate layout in Excel (.xlsx) format with well marked rows A-P and columns 1-24. The cells under "sort description" should contain sample colours below and sample names to the right of each colour (there should be no more than two blank rows within the list of samples).
+        </li>
+        <li>
+            <strong>Collate FCS files:</strong> merges FCS files into a single file. Upload FCS files to be merged. Ensure that your file name matches the sample names above. The expected file name format is date_sample_plate.fcs. The merged file will be output as a .tsv file that can be downloaded and used for downstream merging.
+        </li>
+        <li>
+            <strong>Merge data into spreadsheet:</strong> merges FCS data either into a sample sheet or into a template sheet. Skips FCS merging if collation has not been run. You can either use the output sample sheet from the plate layout to spreadsheet operation, upload a .tsv file (containing plate, well_position and sample columns) or upload an xlsx spreadsheet containing a 'Samples' sheet with 'Plate#', 'Well position' and 'Sample name' columns. If you upload a template sheet, you must also upload a sample sheet. Note that your sample names will have to match exactly in your sample sheet and FCS file names to merge correctly. The merged file will be output as a .tsv file that can be downloaded.
+        </li>
+    </ul>
+
 </div>
 {% endblock %}
