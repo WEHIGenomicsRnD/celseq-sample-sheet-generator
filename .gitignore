@@ -139,6 +139,7 @@ cython_debug/
 # other
 .DS_Store
 uploads/
+prototypes/
 
 # Elastic Beanstalk Files
 .elasticbeanstalk/*

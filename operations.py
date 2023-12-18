@@ -190,13 +190,53 @@ def plate_to_samplesheet(xlsx_file):
     full_samplesheet = full_samplesheet[['plate', 'well_position', 'sample']]
     return full_samplesheet
 
-def merge_fcs_data_with_samplesheet(spreadsheet_filepath, fcs_file):
+def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file, template_sheet_filepath):
     '''
-    Merge FCS data with samplesheet.
+    Merges processed/uploaded data (may be sample sheet and/or fcs data).
+    Will merge into a template if provided.
     '''
-    # need to handle case of xlsx file here too
     spreadsheet = pd.read_csv(spreadsheet_filepath, sep='\t')
-    fcs_data = pd.read_csv(fcs_file, sep='\t')
+    fcs_data = pd.read_csv(fcs_file, sep='\t') if fcs_file else None
+    is_xlsx = spreadsheet_filepath.endswith('.xlsx')
+    merged_data = pd.DataFrame()
 
-    merged = pd.merge(spreadsheet, fcs_data, on=['plate', 'sample', 'well_position'], how='left')
-    return merged
+    if template_sheet_filepath and is_xlsx:
+        raise Exception('Cannot merge template sheet with xlsx file. Please upload a tsv file with plate, sample and well positions.')
+    elif template_sheet_filepath:
+        wb = openpyxl.load_workbook(template_sheet_filepath)
+        assert sum([sheet.lower().startswith('samples') for sheet in wb.sheetnames]) == 1, 'Could not find samples sheet in template file'
+
+        samples_sheet_name = [sheet for sheet in wb.sheetnames if sheet.lower().startswith('samples')][0]
+
+        first_row, found_row = 1, False
+        for row in wb[samples_sheet_name].iter_rows():
+            if row[0].value and row[0].value.lower().startswith('plate'):
+                found_row = True
+                break
+            first_row += 1
+        assert found_row, 'Could not find header row in template file'
+
+        template = pd.read_excel(template_sheet_filepath, sheet_name=samples_sheet_name, header=first_row - 1)
+
+        assert 'Plate#' in template.columns, 'Could not find Plate# column in template file'
+        assert 'Well position' in template.columns, 'Could not find Well position column in template file'
+
+        for plate in spreadsheet.plate.unique():
+            plate_data = template.copy()
+            plate_data['Plate#'] = plate
+            plate_data = pd.merge(plate_data, spreadsheet,
+                                  left_on=['Plate#', 'Well position'],
+                                  right_on=['plate', 'well_position'], how='left')
+            merged_data = pd.concat([merged_data, plate_data])
+    else:
+        merged_data = spreadsheet
+
+    if fcs_data is None:
+        return merged_data
+    
+    if is_xlsx:
+        return pd.merge(merged_data, fcs_data, 
+                               left_on=['Plate#', 'Well position', 'Sample name'],
+                               right_on=['plate', 'well_position', 'sample'], how='left')
+    else:
+        return pd.merge(merged_data, fcs_data, on=['plate', 'sample', 'well_position'], how='left')

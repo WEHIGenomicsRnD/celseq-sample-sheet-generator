@@ -1,7 +1,7 @@
 from flask import Flask, request, session, render_template, send_from_directory
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.utils import secure_filename
-from operations import collate_fcs_files, plate_to_samplesheet, merge_fcs_data_with_samplesheet
+from operations import collate_fcs_files, plate_to_samplesheet, merge_data_with_samplesheet
 
 import os
 import tempfile
@@ -26,7 +26,7 @@ def verify_password(username, password):
         return True
     return False
 
-def render_index(fcs_files=None, plate_spreadsheet=None, sample_sheet=None, error=None):
+def render_index(fcs_files=None, plate_spreadsheet=None, sample_sheet=None, template_sheet=None, error=None):
     collated_fcs_file, samplesheet_file, merged_file = None, None, None
     collated_fcs_path = os.path.join(session['upload_dir'], COLLATED_FCS_FILENAME)
     merged_path = os.path.join(session['upload_dir'], MERGED_FILENAME)
@@ -46,6 +46,7 @@ def render_index(fcs_files=None, plate_spreadsheet=None, sample_sheet=None, erro
                            fcs_files=fcs_files,
                            plate_spreadsheet=plate_spreadsheet,
                            sample_sheet=sample_sheet,
+                           template_sheet=template_sheet,
                            collated_fcs_file=collated_fcs_file,
                            samplesheet_file=samplesheet_file,
                            merged_file=merged_file,
@@ -78,22 +79,27 @@ def handle_fcs_collate(fcs_files):
     fcs_data.to_csv(fcs_data_output, index=False, sep='\t')
     return render_index(fcs_files=fcs_files)
 
-def handle_fcs_merge(sample_sheet):
+def handle_merge(sample_sheet, template_sheet):
     fcs_file = os.path.join(session['upload_dir'], COLLATED_FCS_FILENAME)
     sample_sheet_filepath = os.path.join(session['upload_dir'], SAMPLESHEET_FILENAME)
+    template_sheet_filepath = None
 
     if not sample_sheet and not os.path.exists(sample_sheet_filepath):
         return render_index(error='Please upload a sample sheet')
-    if not os.path.exists(fcs_file):
-        return render_index(error='Please collate your FACS data first!')
+    if not template_sheet and not os.path.exists(fcs_file):
+        return render_index(error='Nothing to merge! Please upload a template or collate your FACS data')
     
     if sample_sheet:
         uploaded_sample_sheet = secure_filename(sample_sheet.filename)
         sample_sheet_filepath = os.path.join(session['upload_dir'], uploaded_sample_sheet)
         sample_sheet.save(sample_sheet_filepath)
 
-    merged = merge_fcs_data_with_samplesheet(sample_sheet_filepath, fcs_file)
+    if template_sheet:
+        uploaded_template_sheet = secure_filename(template_sheet.filename)
+        template_sheet_filepath = os.path.join(session['upload_dir'], uploaded_template_sheet)
+        template_sheet.save(template_sheet_filepath)
 
+    merged = merge_data_with_samplesheet(sample_sheet_filepath, fcs_file, template_sheet_filepath)
     merged_outpath = os.path.join(session['upload_dir'], MERGED_FILENAME)
     merged.to_csv(merged_outpath, index=False, sep='\t')
     return render_index(sample_sheet=sample_sheet)
@@ -127,6 +133,7 @@ def index():
         fcs_files = request.files.getlist('fcs_files')
         plate_spreadsheet = request.files['plate_spreadsheet']
         sample_sheet = request.files['sample_sheet']
+        template_sheet = request.files['template_sheet']
 
         os.makedirs(session['upload_dir'], exist_ok=True)
 
@@ -134,8 +141,8 @@ def index():
             return handle_plate_to_samplesheet(plate_spreadsheet)
         elif operation == 'fcs_collate':
             return handle_fcs_collate(fcs_files)
-        elif operation == 'fcs_merge':
-            return handle_fcs_merge(sample_sheet)
+        elif operation == 'merge':
+            return handle_merge(sample_sheet, template_sheet)
     else:
         return render_index()
 
