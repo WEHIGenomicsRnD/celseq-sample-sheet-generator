@@ -1,30 +1,78 @@
-# CELSeq sample sheet generator
+# CELSeq Sample Sheet Generator
 
-This application is designed to:
+Welcome to the celseq-sample-sheet-generator repository.
 
-- Take plate designs and convert them to a row-wise spreadsheet showing sample ID for each well position.
-- Extract well metadata from FACS files and convert this to a well position naming scheme (e.g., A1, A2 etc.)
-- Take a row-wise sample spreadsheet and integrate FACS data into it, merging by plate, sample ID and well position.
+> **SPECIAL ATTRIBUTION**: We would like to thank WEHI Senior Research Officer [Marek Cmero](https://www.linkedin.com/in/marek-cmero/?originalSubdomain=au) for developing the FACS merge logic used for this project. The code can be found under the `scripts` directory in [`operations.py`](./scripts/operations.py).
 
-## Project Structure
+This codebase contains all assets that will be deployed onto WEHI's Milton HPC via R Shiny. For details on the goals and implementation of this project visit the [GMM wiki page](https://github.com/WEHI-ResearchComputing/Genomics-Metadata-Multiplexing/wiki).
 
-- `app.py`: This is the main Python script that runs the Flask application.
-- `fcs_data.csv`: This is a CSV file that stores the processed FCS data.
-- `prototypes/`: This directory contains Jupyter notebooks used for prototyping the data processing scripts.
-- `static/`: This directory contains static files for the Flask application.
-- `templates/`: This directory contains HTML templates for the Flask application.
-- `uploads/`: This directory is where the uploaded FCS files are stored.
+This markdown file contains the following contents:
+1. [Directory Structure](#directory-structure)
+2. [Running This Application](#running-this-application)
+3. [Prerequisites](#prerequisites)
+4. [Sister Repository](#sister-repository)
+5. [Acknowledgements](#acknowledgements)
 
-## How to Run
+## Directory Structure
+- [`server.R`](./server.R): The entry point to this application
+- [`setup.R`](./setup.R): Used for initialisating this application
+- [`ui.R`](./ui.R): Provides the frontend interface
+- [`R`](./R): A sub-directory that contains R components
+- [`scripts`](./scripts/): Python files that handle merge logic (developed by WEHI Senior Research Officer, [Marek Cmero](https://github.com/WEHIGenomicsRnD/celseq-sample-sheet-generator))
+- [`data.zip`](./data.zip): Contains the sample data to demo the application
+- [`markdown_assets`](./markdown_assets/): Stores images used for markdown files and the [GMM wiki](https://github.com/WEHI-ResearchComputing/Genomics-Metadata-Multiplexing/wiki)
+- [`archive.zip`](./archive.zip): Contains the original contents of the Python/Flask application developed by Marek Cmero
 
-1. Ensure you have Python and Flask installed on your machine.
-2. Run the `app.py` script to start the Flask application.
-3. Navigate to the application in your web browser to upload and process FCS files.
+## Running This Application
 
-## Features
+The **VIDEO** below provides detailed instructions for setting up and running this application on **MacOS/Linux**. This Shiny R application is designed to assist in the processing and analysis of genomics metadata through an interactive interface.
 
-- **Plate Layout to Spreadsheet**: Users can generate a sample spreadsheet from a colour-coded plate design.
-- **Collate FCS Data**: The application can collate data from multiple FCS files into a single CSV file.
-- **Merge FCS Data**: The application can merge FCS data with a spreadsheet.
+**Note:** For Windows users, manual configuration of Python virtual environments and R dependencies is required due to package conflicts. Unfortunately, we do not have an automated solution for Windows at this time.
 
-Please refer to the code and comments in `app.py` for more details on how these features are implemented.
+[![Running the GMM Dashboard: A Step-by-Step Guide for MacOS/Linux Users](http://img.youtube.com/vi/zbZt63h1bYc/0.jpg)](http://www.youtube.com/watch?v=zbZt63h1bYc "Running the GMM Dashboard: A Step-by-Step Guide for MacOS/Linux Users")
+
+## Prerequisites
+
+Before proceeding, ensure you have the following prerequisites installed on your system:
+
+- **Git**: For cloning the repository.
+- **R**: The application is built in R, so ensure you have R installed.
+- **RStudio** (Optional): For a more user-friendly experience running the app locally.
+
+To run the application locally, you can use RStudio or the R console. Here are the steps for both methods:
+
+### Using RStudio
+
+1. **Open RStudio**: Start RStudio on your local machine.
+2. **Open the `app.R` Script**: Go to `File` > `Open File` and navigate to the location of your `app.R` script.
+3. **Run the App**: Click the 'Run App' button in the RStudio interface to start the application.
+
+### Using R Console
+
+1. **Start the R Console**: Open the R console on your machine.
+2. **Run the App**: Execute the following command in the R console to start the application:
+
+    ```r
+    shiny::runApp()
+    ```
+
+### Using R Terminal
+
+Alternatively, you can use the terminal to run the application:
+
+1. **Navigate to the App Directory**: Use the `cd` command to navigate to the directory containing your `app.R` script.
+2. **Run the App**: Execute the `app.R` script using RScript:
+
+    ```r
+    RScript app.R
+    ```
+
+If you encounter issues, ensure you have the latest versions of R and RStudio. For permission errors, run RStudio as an administrator or use sudo on Linux/MacOS.
+
+Windows users may need to manually configure environments and dependencies due to package conflicts.
+
+## Sister Repository
+Please note that the R Shiny components of this codebase was migrated from the [`Genomics-Metadata-Multiplexing (GMM)`](https://github.com/WEHI-ResearchComputing/Genomics-Metadata-Multiplexing) repository.
+
+## Acknowledgements
+We extend our gratitude to all contributors to the Genomics Metadata Multiplexing project. For a complete list of contributors, please visit the [Contributors](https://github.com/WEHI-ResearchComputing/Genomics-Metadata-Multiplexing/wiki/Contributors) wiki page.

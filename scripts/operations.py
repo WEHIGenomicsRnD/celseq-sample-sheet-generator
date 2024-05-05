@@ -62,14 +62,15 @@ def collate_fcs_files(fcs_files, upload_dir):
     fcs_data = pd.DataFrame()
 
     for fcs_file in fcs_files:
-        fcs_savepath = os.path.join(upload_dir, fcs_file.filename)
+        # fcs_savepath = os.path.join(upload_dir, fcs_file.filename)
+        fcs_savepath = fcs_file  # alter this function for mock up test result purpose
         meta, data = fcsparser.parse(fcs_savepath, meta_data_only=False, reformat_meta=True)
         data = data.sort_values('Time')
-        data['well_position'] = get_well_positions(meta)
-
+        
         plate, sample = get_plate_and_sample_from_filepath(fcs_savepath)
-        data['plate'] = plate
-        data['sample'] = sample
+        data['Plate#'] = plate
+        data['Well position'] = get_well_positions(meta)
+        data['Sample name'] = sample
 
         fcs_data = pd.concat([fcs_data, data])
 
@@ -188,32 +189,27 @@ def plate_to_samplesheet(xlsx_file):
 
     # reorder columns
     full_samplesheet = full_samplesheet[['plate', 'well_position', 'sample']]
+    full_samplesheet.rename({'plate': 'Plate#', 'well_position': 'Well position', 'sample': "Sample name"}, axis=1, inplace=True)
     return full_samplesheet
 
-def load_excel_samplesheet(filepath):
-    '''
-    Load excel spreadsheet samplesheet and check it has a 'samples' sheet.
-    Locate the first row and then load and return the data as a pandas dataframe.
-    '''
-    wb = openpyxl.load_workbook(filepath)
-    assert sum([sheet.lower().startswith('sample') for sheet in wb.sheetnames]) == 1, 'Could not find samples sheet in template file'
+def load_excel_samplesheet(template_sheet_filepath):
+    df = pd.read_excel(template_sheet_filepath, skiprows=1, header=None, engine='openpyxl')
 
-    samples_sheet_name = [sheet for sheet in wb.sheetnames if sheet.lower().startswith('sample')][0]
+    def combine_columns(a, b):
+        if pd.isna(a):
+            return b
+        elif pd.isna(b):
+            return a
+        return f'{a}_{b}'
+        
+    new_columns = [combine_columns(a, b) for a, b in zip(df.iloc[0], df.iloc[1])]
 
-    first_row, found_row = 1, False
-    for row in wb[samples_sheet_name].iter_rows():
-        if row[0].value and row[0].value.lower().startswith('plate'):
-            found_row = True
-            break
-        first_row += 1
-    assert found_row, 'Could not find header row in template file'
+    df.columns = new_columns
+    df = df.drop(index=[0, 1])
 
-    samplesheet = pd.read_excel(filepath, sheet_name=samples_sheet_name, header=first_row - 1)
+    # df.rename({'Plate#': 'plate', 'Well position': 'well_position', 'Sample name': 'sample'}, axis=1, inplace=True)    
+    return df
 
-    assert 'Plate#' in samplesheet.columns, 'Could not find Plate# column in template file'
-    assert 'Well position' in samplesheet.columns, 'Could not find Well position column in template file'
-
-    return samplesheet
 
 def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file, template_sheet_filepath):
     '''
@@ -227,15 +223,21 @@ def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file, template_sheet_f
     if template_sheet_filepath and is_xlsx:
         raise Exception('Cannot merge template sheet with xlsx file. Please upload a tsv file with plate, sample and well positions.')
     elif template_sheet_filepath:
+       
         template = load_excel_samplesheet(template_sheet_filepath)
-        spreadsheet = pd.read_csv(spreadsheet_filepath, sep='\t')
-        for plate in spreadsheet.plate.unique():
+        spreadsheet = pd.read_csv(spreadsheet_filepath, sep='\t')  # sample sheet
+        
+        for plate in spreadsheet['Plate#'].unique():
+            
             plate_data = template.copy()
+            plate_data.rename({'Sample name': 'Sample name'}, axis=1, inplace=True)
             plate_data['Plate#'] = plate
+            # print(plate_data.columns, spreadsheet.columns)
             plate_data = pd.merge(plate_data, spreadsheet,
-                                  left_on=['Plate#', 'Well position'],
-                                  right_on=['plate', 'well_position'], how='left')
+                                  on=['Plate#', 'Well position', 'Sample name'], how='left')
+            # return plate_data
             merged_data = pd.concat([merged_data, plate_data])
+        
     elif not is_xlsx:
         merged_data = pd.read_csv(spreadsheet_filepath, sep='\t')
 
@@ -245,10 +247,59 @@ def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file, template_sheet_f
     if is_xlsx:
         spreadsheet = load_excel_samplesheet(spreadsheet_filepath)
         samples_colname = [col for col in spreadsheet.columns if col.lower() == 'sample' or col.lower() == 'sample name'][0]
-        print(spreadsheet.head())
-        print(fcs_data.head())
+
         return pd.merge(spreadsheet, fcs_data, 
                         left_on=['Plate#', 'Well position', samples_colname],
                         right_on=['plate', 'well_position', 'sample'], how='left')
     else:
-        return pd.merge(merged_data, fcs_data, on=['plate', 'sample', 'well_position'], how='left')
+        # print(fcs_data.columns)
+        return pd.merge(merged_data, fcs_data, on=['Plate#', 'Well position', 'Sample name'], how='left')
+
+
+
+def merge_samples_and_primers(primer_index_file_path, merged_samplesheet_fcs_and_template_sheet_df):
+    """
+    Merges sample sheet and template sheet data with primer and index information from an Excel file.
+    
+    Parameters:
+    - primer_index_file_path: The path to the Excel file containing primer and index information.
+    - merged_samplesheet_fcs_and_template_sheet_df: DataFrame containing merged sample sheet and template sheet data.
+    
+    Returns:
+    - DataFrame with merged information including primer and index data.
+    """
+    # Read primer and index information from Excel
+    primer_index_df = pd.read_excel(primer_index_file_path, sheet_name='Sample primer & index', skiprows=3, engine='openpyxl')
+    # Rename 'Sample name' column to 'Sample'
+    primer_index_df.rename({'Sample name': 'Sample'}, axis=1, inplace=True)
+    
+    # Merge the data frames
+    merged_df = pd.merge(merged_samplesheet_fcs_and_template_sheet_df, primer_index_df, 
+                         on=['Plate#', 'Well position', 'Sample'], 
+                         suffixes=('', '_primer'), how='left')
+    
+    return merged_df
+
+
+def merge_samples_and_primers(primer_index_file_path, merged_samplesheet_fcs_and_template_sheet_df):
+    """
+    Merges sample sheet and template sheet data with primer and index information from an Excel file.
+    
+    Parameters:
+    - primer_index_file_path: The path to the Excel file containing primer and index information.
+    - merged_samplesheet_fcs_and_template_sheet_df: DataFrame containing merged sample sheet and template sheet data.
+    
+    Returns:
+    - DataFrame with merged information including primer and index data.
+    """
+    # Read primer and index information from Excel
+    primer_index_df = pd.read_excel(primer_index_file_path, sheet_name='Sample primer & index', skiprows=3, engine='openpyxl')
+    # Rename 'Sample name' column to 'Sample'
+    primer_index_df.rename({'Sample name': 'Sample'}, axis=1, inplace=True)
+    
+    # Merge the data frames
+    merged_df = pd.merge(merged_samplesheet_fcs_and_template_sheet_df, primer_index_df, 
+                         on=['Plate#', 'Well position', 'Sample'], 
+                         suffixes=('', '_primer'), how='left')
+    
+    return merged_df
