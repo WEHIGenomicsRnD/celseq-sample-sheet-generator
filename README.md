@@ -10,7 +10,8 @@ This markdown file contains the following contents:
 1. [Directory Structure](#directory-structure)
 2. [Running This Application](#running-this-application)
 3. [Prerequisites](#prerequisites)
-4. [Acknowledgements](#acknowledgements)
+4. [Sister Repository](#sister-repository)
+5. [Acknowledgements](#acknowledgements)
 
 ## Directory Structure
 - [`server.R`](./server.R): The entry point to this application
@@ -69,6 +70,9 @@ Alternatively, you can use the terminal to run the application:
 If you encounter issues, ensure you have the latest versions of R and RStudio. For permission errors, run RStudio as an administrator or use sudo on Linux/MacOS.
 
 Windows users may need to manually configure environments and dependencies due to package conflicts.
+
+## Sister Repository
+Please note that the R Shiny components of this codebase was migrated from the [`Genomics-Metadata-Multiplexing (GMM)`](https://github.com/WEHI-ResearchComputing/Genomics-Metadata-Multiplexing) repository.
 
 ## Acknowledgements
 We extend our gratitude to all contributors to the Genomics Metadata Multiplexing project. For a complete list of contributors, please visit the [Contributors](https://github.com/WEHI-ResearchComputing/Genomics-Metadata-Multiplexing/wiki/Contributors) wiki page.
