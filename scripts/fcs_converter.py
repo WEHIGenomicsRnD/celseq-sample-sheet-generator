@@ -48,6 +48,10 @@ def process_files(plate_layout_path, fcs_files, template_sheet_path, primer_inde
         # primer_index_df.rename({'Plate#': 'plate', 'Well position': 'well_position', 'Sample name': 'sample'}, axis=1, inplace=True)
         merged_df = pd.merge(merged_df, primer_index_df, on=['Plate#', 'Well position', 'Sample name'], how='left', suffixes=('', '_primer'))
 
+    # Drop columns with empty values that start with a single character followed by a period or 'unnamed'
+    cols_to_drop = [col for col in merged_df.columns if (col.startswith(('X.', 'Y.')) or col.startswith('unnamed')) and merged_df[col].isna().all()]
+    merged_df.drop(columns=cols_to_drop, inplace=True)
+
     # Output file processing
     if 'csv' in output_file or 'tsv' in output_format:
         sep = ',' if 'csv' in output_file else '\t'
