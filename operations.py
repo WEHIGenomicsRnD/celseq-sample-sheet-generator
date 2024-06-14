@@ -5,16 +5,19 @@ import fcsparser
 
 # standard well dimensions
 WELL_ROWS = 16
-WELL_COLS = 24 
+WELL_COLS = 24
 
 # how far we search for the start of the well positions and sample lookup
 ROWMAX = 100
 COLMAX = 25
 
+PLATE_PREFIXES = ['LCE', 'PRM']
+
+
 def get_well_positions(meta):
     '''
     Extract well positions (e.g., A1, A2 etc.) from FCS file metadata,
-    ordered by sorting locations.   
+    ordered by sorting locations.
     '''
     metalist = list(meta.keys())
     locnames = [item for item in metalist if item.startswith('INDEX SORTING LOCATIONS')]
@@ -34,19 +37,27 @@ def get_well_positions(meta):
 
     return wells
 
+
 def get_plate_and_sample_from_filepath(fcs_filepath):
     '''
     Extract plate and sample name from file names in format
-    e.g., DDmonthYY_INX_samplename_platename.fcs where plate
-    name starts with LCE.
+    e.g., DDmonthYY_INX_samplename_platename.fcs where plate name
+    starts with a prefix from PLATE_PREFIXES.
     '''
     filename = os.path.basename(fcs_filepath)
     filename = os.path.splitext(filename)[0]
 
     # Extract the plate name
-    plate_start_index = filename.find('LCE')
+    plate = None
+    for prefix in PLATE_PREFIXES:
+        plate_start_index = filename.find(prefix)
+        if plate_start_index != -1:
+            break
+
     if plate_start_index != -1:
         plate = filename[plate_start_index:]
+    else:
+        print('Could not find plate name in file name {}'.format(filename))
 
     # Extract the sample name
     sample_start_index = filename.find('INX_')
@@ -54,6 +65,7 @@ def get_plate_and_sample_from_filepath(fcs_filepath):
         sample_name = filename[sample_start_index + len('INX_'):(plate_start_index - 1)]
 
     return plate, sample_name
+
 
 def collate_fcs_files(fcs_files, upload_dir):
     '''
@@ -74,6 +86,7 @@ def collate_fcs_files(fcs_files, upload_dir):
         fcs_data = pd.concat([fcs_data, data])
 
     return fcs_data
+
 
 def get_sample_lookup(sheet, sample_start_cell):
     '''
@@ -98,6 +111,7 @@ def get_sample_lookup(sheet, sample_start_cell):
 
     return sample_dict
 
+
 def get_sample_list(sheet, sample_lookup, well_start_cell):
     '''
     iterate through the plate cells and extract
@@ -117,7 +131,7 @@ def get_sample_list(sheet, sample_lookup, well_start_cell):
                 )
                 assert cell_colour in sample_lookup, error_message
                 samplename = sample_lookup[cell_colour]
-            
+
             # get well ID
             well_row = sheet.cell(row=well_start_cell.row + row, column=well_start_cell.column).value
             well_col = sheet.cell(row=well_start_cell.row - 1, column=well_start_cell.column + col).value
@@ -126,6 +140,7 @@ def get_sample_list(sheet, sample_lookup, well_start_cell):
             sample_list.append((well_id, samplename))
 
     return sample_list
+
 
 def find_sample_start_cell(sheet):
     '''
@@ -143,6 +158,7 @@ def find_sample_start_cell(sheet):
 
     return sample_start
 
+
 def find_well_start(sheet):
     '''
     Find the start of the well positions in the spreadsheet.
@@ -159,6 +175,7 @@ def find_well_start(sheet):
                 if sheet.cell(row=row - 1, column=col + 1).value == 1:
                     return well_start_cell
     return None
+
 
 def plate_to_samplesheet(xlsx_file):
     '''
@@ -190,6 +207,7 @@ def plate_to_samplesheet(xlsx_file):
     full_samplesheet = full_samplesheet[['plate', 'well_position', 'sample']]
     return full_samplesheet
 
+
 def load_excel_samplesheet(filepath):
     '''
     Load excel spreadsheet samplesheet and check it has a 'samples' sheet.
@@ -214,6 +232,7 @@ def load_excel_samplesheet(filepath):
     assert 'Well position' in samplesheet.columns, 'Could not find Well position column in template file'
 
     return samplesheet
+
 
 def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file, template_sheet_filepath):
     '''
@@ -241,7 +260,7 @@ def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file, template_sheet_f
 
     if fcs_data is None:
         return merged_data
-    
+
     if is_xlsx:
         spreadsheet = load_excel_samplesheet(spreadsheet_filepath)
         samples_colname = [col for col in spreadsheet.columns if col.lower() == 'sample' or col.lower() == 'sample name'][0]
