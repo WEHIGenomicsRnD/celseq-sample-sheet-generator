@@ -171,6 +171,7 @@ data_processing_handler <- function(input, output, session, uploadedFilePaths) {
                            shQuote(outputFilePath))
         
         # Execute the command and capture output
+        print(command)
         command_output <- system(command, intern = TRUE, ignore.stderr = FALSE, wait = TRUE)
         print(command_output)
 
