@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import openpyxl
 import fcsparser
+from natsort import natsorted
 
 # standard well dimensions
 WELL_ROWS = 16
@@ -12,6 +13,19 @@ ROWMAX = 100
 COLMAX = 25
 
 PLATE_PREFIXES = ['LCE', 'PRM']
+
+
+def sort_by_plate_and_well(data):
+    '''
+    Sort data by naturally sorted plate and well position.
+    '''
+    sorted_data = data.iloc[
+        natsorted(data.index, key=lambda i:
+                  (data.loc[i, 'plate'],
+                   data.loc[i, 'well_position']))
+    ].reset_index(drop=True)
+
+    return sorted_data
 
 
 def get_well_positions(meta):
@@ -83,9 +97,9 @@ def collate_fcs_files(fcs_files, upload_dir):
         data['plate'] = plate
         data['sample'] = sample
 
-        fcs_data = pd.concat([fcs_data, data])
+        fcs_data = pd.concat([fcs_data, data]).reset_index(drop=True)
 
-    return fcs_data
+    return sort_by_plate_and_well(fcs_data)
 
 
 def get_sample_lookup(sheet, sample_start_cell):
@@ -203,9 +217,10 @@ def plate_to_samplesheet(xlsx_file):
 
         full_samplesheet = pd.concat([full_samplesheet, samplesheet])
 
-    # reorder columns
+    # reorder columns and perform natural sort by plate and well position
     full_samplesheet = full_samplesheet[['plate', 'well_position', 'sample']]
-    return full_samplesheet
+
+    return sort_by_plate_and_well(full_samplesheet)
 
 
 def load_excel_samplesheet(filepath):

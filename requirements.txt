@@ -20,6 +20,7 @@ jupyter_client
 jupyter_core
 MarkupSafe
 matplotlib-inline
+natsort
 nest-asyncio
 numpy==1.26.2
 openpyxl

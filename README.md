@@ -1,4 +1,4 @@
-# CELSeq sample sheet generator
+# CELSeq sample sheet generatorread
 
 This application is designed to:
 
@@ -18,7 +18,7 @@ This application is designed to:
 ## How to Run
 
 1. Ensure you have Python and Flask installed on your machine.
-2. Run the `app.py` script to start the Flask application.
+2. Run `python application.py` script to start the Flask application.
 3. Navigate to the application in your web browser to upload and process FCS files.
 
 ## Features
@@ -27,4 +27,4 @@ This application is designed to:
 - **Collate FCS Data**: The application can collate data from multiple FCS files into a single CSV file.
 - **Merge FCS Data**: The application can merge FCS data with a spreadsheet.
 
-Please refer to the code and comments in `app.py` for more details on how these features are implemented.
+Please refer to the code and comments in `application.py` for more details on how these features are implemented.
