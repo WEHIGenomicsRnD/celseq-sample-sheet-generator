@@ -74,9 +74,15 @@ data_upload_handler <- function(input, output, session) {
         if (!is.null(input$folder_input)) {
             # Reset or initialize lists for each file type
             fcs_files_info <- list()
-            
+
             # Iterate over each file in the uploaded folder
             for (i in 1:nrow(input$folder_input)) {
+                # ignore any files that begin with "~$" indicating temporary files
+                if (grepl("~$", input$folder_input$name[i], fixed = TRUE)) {
+                    cat(sprintf("Ignoring temporary file: %s\n", input$folder_input$name[i]))
+                    next
+                }
+
                 destPath <- paste0("temp/data/", input$folder_input$name[i])
                 file.copy(input$folder_input$datapath[i], destPath)
                 
