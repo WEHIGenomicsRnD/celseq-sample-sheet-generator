@@ -206,6 +206,11 @@ def plate_to_samplesheet(xlsx_file):
     return full_samplesheet
 
 def load_excel_samplesheet(template_sheet_filepath):
+    df = pd.read_excel(template_sheet_filepath, skiprows=3,
+                       sheet_name="Sample primer & index", engine='openpyxl')
+    return df
+
+def load_template_sheet(template_sheet_filepath):
     df = pd.read_excel(template_sheet_filepath, skiprows=1, header=None, engine='openpyxl')
 
     def combine_columns(a, b):
@@ -220,9 +225,7 @@ def load_excel_samplesheet(template_sheet_filepath):
     df.columns = new_columns
     df = df.drop(index=[0, 1])
 
-    # df.rename({'Plate#': 'plate', 'Well position': 'well_position', 'Sample name': 'sample'}, axis=1, inplace=True)
     return df
-
 
 def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file,
                                 template_sheet_filepath):
@@ -233,16 +236,16 @@ def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file,
     fcs_data = pd.read_csv(fcs_file, sep='\t') if fcs_file else None
     is_xlsx = spreadsheet_filepath.endswith('.xlsx')
     merged_data = pd.DataFrame()
-
+    
     if template_sheet_filepath and is_xlsx:
         raise Exception(
             '''
             Cannot merge template sheet with xlsx file.
-            Please upload a tsv file with plate, sample and well positions.
+#            Please upload a tsv file with plate, sample and well positions.
             ''')
     elif template_sheet_filepath:
 
-        template = load_excel_samplesheet(template_sheet_filepath)
+        template = load_template_sheet(template_sheet_filepath)
         spreadsheet = pd.read_csv(spreadsheet_filepath,
                                   sep='\t')  # samplesheet
 
@@ -282,7 +285,7 @@ def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file,
 
         return pd.merge(spreadsheet, fcs_data,
                         left_on=['Plate#', 'Well position', samples_colname],
-                        right_on=['plate', 'well_position', 'sample'],
+                        right_on=['Plate#', 'Well position', 'Sample name'],
                         how='left')
     else:
         # print(fcs_data.columns)

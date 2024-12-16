@@ -25,28 +25,59 @@ def process_files(plate_layout_path, fcs_files, template_sheet_path, primer_inde
     # Determine output format based on file extension
     output_format = output_file.split('.')[-1]
 
-    # Operation 1: Create Sample Sheet from Plate Layout
-    sample_sheet_df = plate_to_samplesheet(Path(plate_layout_path))
-    sample_sheet_output_path = 'temp/op1_plate_layout_to_spreadsheet.tsv'
-    sample_sheet_df.to_csv(sample_sheet_output_path, sep='\t', index=False)
+    plate_layout_provided = plate_layout_path is not None and \
+        plate_layout_path != ""
+    fcs_files_provided = fcs_files is not None and fcs_files != ""
+    template_sheet_provided = template_sheet_path is not None and \
+        template_sheet_path != ""
+    primer_index_provided = primer_index_path is not None and \
+        primer_index_path != ""
 
-    # Operation 2: Combine FCS Files into One Document
-    collated_fcs_df = collate_fcs_files(fcs_files.split(' '), "")
-    collated_fcs_output_path = 'temp/op2_collate_fcs_files.tsv'
-    collated_fcs_df.to_csv(collated_fcs_output_path, sep='\t', index=False)
-    
-    # print(collated_fcs_df)
+    if not plate_layout_provided and not fcs_files_provided and \
+       not template_sheet_provided and not primer_index_provided:
+        raise ValueError(
+            """No input files provided. Please provide at
+            least one input file."""
+        )
 
-    # Operation 3: Merge All Data into Comprehensive File
-    merged_df = merge_data_with_samplesheet(spreadsheet_filepath=sample_sheet_output_path,
-                                            fcs_file=collated_fcs_output_path,
-                                            template_sheet_filepath=Path(template_sheet_path))
+    sample_sheet_df = pd.DataFrame()
+    if plate_layout_provided:
+        # Operation 1: Create Sample Sheet from Plate Layout
+        sample_sheet_df = plate_to_samplesheet(Path(plate_layout_path))
+        sample_sheet_output_path = 'temp/op1_plate_layout_to_spreadsheet.tsv'
+        sample_sheet_df.to_csv(sample_sheet_output_path, sep='\t', index=False)
+    elif not template_sheet_provided and not primer_index_provided:
+        sample_sheet_output_path = None
+    elif template_sheet_provided:
+        sample_sheet_output_path = template_sheet_path
+    else:
+        sample_sheet_output_path = primer_index_path
 
-    if primer_index_path:
-        # Operation 4 (Optional): Add Primer Index to Comprehensive File
-        primer_index_df = pd.read_excel(primer_index_path, sheet_name='Sample primer & index', skiprows=3, engine='openpyxl')
-        # primer_index_df.rename({'Plate#': 'plate', 'Well position': 'well_position', 'Sample name': 'sample'}, axis=1, inplace=True)
-        merged_df = pd.merge(merged_df, primer_index_df, on=['Plate#', 'Well position', 'Sample name'], how='left', suffixes=('', '_primer'))
+    collated_fcs_output_path = None
+    if fcs_files_provided:
+        # Operation 2: Combine FCS Files into One Document
+        collated_fcs_df = collate_fcs_files(fcs_files.split(' '), "")
+        collated_fcs_output_path = 'temp/op2_collate_fcs_files.tsv'
+        collated_fcs_df.to_csv(collated_fcs_output_path, sep='\t', index=False)
+
+    if template_sheet_provided:
+        # Operation 3: Merge All Data into Comprehensive File
+        merged_df = merge_data_with_samplesheet(spreadsheet_filepath=sample_sheet_output_path,
+                                                fcs_file=collated_fcs_output_path,
+                                                template_sheet_filepath=Path(template_sheet_path))
+        if primer_index_provided:
+            # Operation 4 (Optional): Add Primer Index to Comprehensive File
+            primer_index_df = pd.read_excel(primer_index_path, sheet_name='Sample primer & index', skiprows=3, engine='openpyxl')
+            # primer_index_df.rename({'Plate#': 'plate', 'Well position': 'well_position', 'Sample name': 'sample'}, axis=1, inplace=True)
+            merged_df = pd.merge(merged_df, primer_index_df, on=['Plate#', 'Well position', 'Sample name'], how='left', suffixes=('', '_primer'))
+    elif primer_index_provided:
+        merged_df = merge_data_with_samplesheet(spreadsheet_filepath=sample_sheet_output_path,
+                                                fcs_file=collated_fcs_output_path,
+                                                template_sheet_filepath=None)
+    elif fcs_files_provided and not plate_layout_provided:
+        merged_df = collated_fcs_df
+    else:
+        merged_df = sample_sheet_df
 
     # Drop columns with empty values that start with a single character followed by a period or 'unnamed'
     cols_to_drop = [col for col in merged_df.columns if (col.startswith(('X.', 'Y.')) or col.startswith('unnamed')) and merged_df[col].isna().all()]
@@ -63,9 +94,9 @@ def process_files(plate_layout_path, fcs_files, template_sheet_path, primer_inde
 def main():
     """Main function to parse arguments and call processing functions."""
     parser = argparse.ArgumentParser(description='Process GMM testing files.')
-    parser.add_argument('-pl', '--plate-layout', required=True, help='Path to plate layout file')
-    parser.add_argument('-fcs', '--fcs-files', required=True, help='Path to FCS file')
-    parser.add_argument('-ts', '--template-sheet', required=True, help='Path to template sheet file')
+    parser.add_argument('-pl', '--plate-layout', required=False, help='Path to plate layout file')
+    parser.add_argument('-fcs', '--fcs-files', required=False, help='Path to FCS file')
+    parser.add_argument('-ts', '--template-sheet', required=False, help='Path to template sheet file')
     parser.add_argument('-pi', '--primer-index', required=False, help='Path to primer index file')
     parser.add_argument('-o', '--output-file', required=True, help='Full path and file name for the output, including extension (.csv, .tsv, .xlsx)')
     

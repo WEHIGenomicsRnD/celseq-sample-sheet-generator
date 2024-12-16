@@ -116,6 +116,12 @@ data_upload_handler <- function(input, output, session) {
     return(uploadedFilePaths)
 }
 
+raise_error <- function(errorMessage) {
+    shinyjs::hide("spinner")
+    print(paste(errorMessage))
+    shinyalert::shinyalert("Error", errorMessage, type = "error")
+}
+
 data_processing_handler <- function(input, output, session, uploadedFilePaths) {
     processedData <- reactiveVal(NULL)  # To store the result of processing
     
@@ -127,54 +133,47 @@ data_processing_handler <- function(input, output, session, uploadedFilePaths) {
         shinyjs::show("spinner")
 
         # Track which type of files are missing
-        errorCount <- 0
+        fcs_files_present <- FALSE
+        template_sheet_present <- FALSE
+        plate_layout_present <- FALSE
 
         # Check if there are any FCS files uploaded
-        if (length(uploadedFilePaths$fcs_files) == 0) {
-            errorCount <- errorCount + 1
+        if (length(uploadedFilePaths$fcs_files) > 0) {
+            fcs_files_present <- TRUE
         }
         # Check if the template sheet was uploaded
-        if (uploadedFilePaths$template_sheet$path == "") {
-            errorCount <- errorCount + 10
+        if (uploadedFilePaths$template_sheet$path != "") {
+            template_sheet_present <- TRUE
         }
         # Check if the plate layout sheet was uploaded
-        if (uploadedFilePaths$plate_layout$path == "") {
-            errorCount <- errorCount + 100
+        if (uploadedFilePaths$plate_layout$path != "") {
+            plate_layout_present <- TRUE
         }
-        # If error exists, handle it accordingly
-        if (errorCount != 0) {
-            errorMessage <- "All required files (i.e. FCS, plate_layout, template) are missing!"
-            if (errorCount == 1) {
-                errorMessage <- "No FCS files detected!"
-            } else if (errorCount == 10) {
-                errorMessage <- "No template sheet files detected!"
-            } else if (errorCount == 100) {
-                errorMessage <- "No plate layout sheet detected!"
-            } else if (errorCount == 11) {
-                errorMessage <- "No FCS files and template sheet detected!"
-            } else if (errorCount == 101) {
-                errorMessage <- "No FCS files and plate layout sheet detected!"
-            } else if (errorCount == 110) {
-                errorMessage <- "No plate layout and template sheet detected!"
-            }
-            # Show the error
-            shinyjs::hide("spinner")
-            print(paste(errorMessage))
-            shinyalert::shinyalert("Error", errorMessage, type = "error")
-            return(processedData)
-        }
-        
-        # Assuming uploadedFilePaths$fcs_files is a list of file paths
-        # Join multiple FCS file paths into a single string if necessary
-        fcs_files_argument <- paste(uploadedFilePaths$fcs_files, collapse = " ")
+      
+        # TODO: here we need to split between two functionalties:
+        # 1. if ONLY the plate layout is provided, we generate a plate layout
+        #    table
+        # 2. if all other files are provided, functionality is as before
+        # NOTE: we should keep this extensible so that we can also handle a
+        # scenario where we only have FCS provided and we want to merge them
+            
         outputFilePath <- tempfile(fileext = ".csv", tmpdir = "temp/data")
-        # Construct the command to call the external Python script with the updated file paths
-        command <- sprintf("python scripts/fcs_converter.py --plate-layout %s --fcs-files %s --template-sheet %s --primer-index %s --output-file %s",
-                           shQuote(uploadedFilePaths$plate_layout$path), 
-                           shQuote(fcs_files_argument), 
-                           shQuote(uploadedFilePaths$template_sheet$path), 
-                           shQuote(uploadedFilePaths$primer_index$path), 
-                           shQuote(outputFilePath))
+
+        if (!fcs_files_present & !template_sheet_present & !plate_layout_present) {
+            raise_error("All required files (i.e. FCS, plate_layout, template) are missing!")
+            return(processedData)
+        } else {
+            # Assuming uploadedFilePaths$fcs_files is a list of file paths
+            # Join multiple FCS file paths into a single string if necessary
+            fcs_files_argument <- paste(uploadedFilePaths$fcs_files, collapse = " ")
+            # Construct the command to call the external Python script with the updated file paths
+            command <- sprintf("python scripts/fcs_converter.py --plate-layout %s --fcs-files %s --template-sheet %s --primer-index %s --output-file %s",
+                               shQuote(uploadedFilePaths$plate_layout$path), 
+                               shQuote(fcs_files_argument), 
+                               shQuote(uploadedFilePaths$template_sheet$path), 
+                               shQuote(uploadedFilePaths$primer_index$path), 
+                               shQuote(outputFilePath))
+        }
         
         # Execute the command and capture output
         print(command)
