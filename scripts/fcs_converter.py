@@ -22,6 +22,7 @@ def process_files(plate_layout_path, fcs_files, template_sheet_path, primer_inde
     - primer_index_path: Path to the primer index file.
     - output_file: Path and name of the output file, including desired extension.
     """
+    # TODO: Need to refactor, the logic is getting too convoluted
     # Determine output format based on file extension
     output_format = output_file.split('.')[-1]
 
@@ -75,14 +76,15 @@ def process_files(plate_layout_path, fcs_files, template_sheet_path, primer_inde
                                                 fcs_file=collated_fcs_output_path,
                                                 template_sheet_filepath=None)
     elif fcs_files_provided and not plate_layout_provided:
-        merged_df = collated_fcs_df
+        # need to sort FCS DF by sample then well position
+        merged_df = collated_fcs_df.drop_duplicates(subset=['Plate#', 'Well position'], keep='first')
     else:
         merged_df = sample_sheet_df
 
     # Drop columns with empty values that start with a single character followed by a period or 'unnamed'
     cols_to_drop = [col for col in merged_df.columns if (col.startswith(('X.', 'Y.')) or col.startswith('unnamed')) and merged_df[col].isna().all()]
     merged_df.drop(columns=cols_to_drop, inplace=True)
-
+    
     # Output file processing
     if 'csv' in output_file or 'tsv' in output_format:
         sep = ',' if 'csv' in output_file else '\t'

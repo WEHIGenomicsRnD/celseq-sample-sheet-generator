@@ -156,7 +156,7 @@ data_processing_handler <- function(input, output, session, uploadedFilePaths) {
         # 2. if all other files are provided, functionality is as before
         # NOTE: we should keep this extensible so that we can also handle a
         # scenario where we only have FCS provided and we want to merge them
-            
+
         outputFilePath <- tempfile(fileext = ".csv", tmpdir = "temp/data")
 
         if (!fcs_files_present & !template_sheet_present & !plate_layout_present) {

@@ -6,7 +6,7 @@ library(shinycssloaders)
 library(reticulate)
 
 # Define the Python dependencies you want to install
-PYTHON_DEPENDENCIES <- c('pip', 'fcsparser', 'openpyxl', "xlrd")
+PYTHON_DEPENDENCIES <- c("pip", "fcsparser", "openpyxl", "xlrd", "natsort")
 
 # Create a new virtual environment named 'py3-virtualenv' with a specified Python executable
 virtualenv_create(envname = "py3-virtualenv", python = "/usr/bin/python3")
