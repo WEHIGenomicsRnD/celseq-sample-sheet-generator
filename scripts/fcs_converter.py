@@ -69,6 +69,17 @@ def process_files(plate_layout_path, fcs_files, template_sheet_path, primer_inde
         if primer_index_provided:
             # Operation 4 (Optional): Add Primer Index to Comprehensive File
             primer_index_df = pd.read_excel(primer_index_path, sheet_name='Sample primer & index', skiprows=3, engine='openpyxl')
+
+            # TODO: generalise this code as we are also checking the template sheet
+            # Make sure we have a sample column
+            sample_cols = ['Sample', 'Sample name']
+            if not any(col in primer_index_df.columns for col in sample_cols):
+                raise ValueError("Sample column not found in primer index sheet.")
+
+            # Coerce sample column to string
+            sample_col = next(col for col in sample_cols if col in primer_index_df.columns)
+            primer_index_df[sample_col] = primer_index_df[sample_col].fillna('').astype(str)
+
             # primer_index_df.rename({'Plate#': 'plate', 'Well position': 'well_position', 'Sample name': 'sample'}, axis=1, inplace=True)
             merged_df = pd.merge(merged_df, primer_index_df, on=['Plate#', 'Well position', 'Sample name'], how='left', suffixes=('', '_primer'))
     elif primer_index_provided:

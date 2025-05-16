@@ -61,8 +61,11 @@ def get_plate_and_sample_from_filepath(fcs_filepath):
     filename = os.path.basename(fcs_filepath)
     filename = os.path.splitext(filename)[0]
 
-    # Extract the plate name
     plate = None
+    plate_start_index = -1
+    sample_name = ""
+
+    # Extract the plate name
     for prefix in PLATE_PREFIXES:
         plate_start_index = filename.find(prefix)
         if plate_start_index != -1:
@@ -74,10 +77,18 @@ def get_plate_and_sample_from_filepath(fcs_filepath):
         raise Exception('Plate name not found in filename {}'.format(filename))
 
     # Extract the sample name
-    sample_start_index = filename.find('INX_')
-    if sample_start_index != -1:
-        sample_name = filename[sample_start_index + len('INX_'):
-                               (plate_start_index - 1)]
+    if "PRM" in plate:
+        # For PRM plates, sample name is after the plate name
+        sample_name = filename[plate_start_index:].split('_')
+        assert len(sample_name) > 1, \
+            'Sample name not found in filename {}'.format(filename)
+        sample_name = sample_name[1]
+    else:
+        # For LCE plates, sample name is between INX_ and plate name
+        sample_start_index = filename.find('INX_')
+        if sample_start_index != -1:
+            sample_name = filename[sample_start_index + len('INX_'):
+                                   (plate_start_index - 1)]
 
     return plate, sample_name
 
@@ -103,6 +114,7 @@ def collate_fcs_files(fcs_files, upload_dir):
 
     return sort_by_plate_and_well(fcs_data)
 
+
 def get_sample_lookup(sheet, sample_start_cell):
     '''
     Extract sample lookup (colour index > sample name) from plate layout spreadsheet.
@@ -125,6 +137,7 @@ def get_sample_lookup(sheet, sample_start_cell):
         sample_dict[colour] = value
 
     return sample_dict
+
 
 def get_sample_list(sheet, sample_lookup, well_start_cell):
     '''
@@ -155,6 +168,7 @@ def get_sample_list(sheet, sample_lookup, well_start_cell):
 
     return sample_list
 
+
 def find_sample_start_cell(sheet):
     '''
     Find the start of the sample names in the spreadsheet.
@@ -170,6 +184,7 @@ def find_sample_start_cell(sheet):
                 break
 
     return sample_start
+
 
 def find_well_start(sheet):
     '''
@@ -188,6 +203,7 @@ def find_well_start(sheet):
                     return well_start_cell
     return None
 
+
 def plate_to_samplesheet(xlsx_file):
     '''
     Convert plate layout spreadsheet to samplesheet.
@@ -197,7 +213,8 @@ def plate_to_samplesheet(xlsx_file):
     # iterate through all sheets
     full_samplesheet = pd.DataFrame()
     for sheet in wb:
-        if not sheet.title.lower().startswith('lce'):
+        if not sheet.title.lower().startswith('lce') and not \
+            sheet.title.lower().startswith('prm'):
             print('Skipping sheet {}'.format(sheet.title))
             continue
 
@@ -219,10 +236,22 @@ def plate_to_samplesheet(xlsx_file):
     full_samplesheet.rename({'plate': 'Plate#', 'well_position': 'Well position', 'sample': "Sample name"}, axis=1, inplace=True)
     return full_samplesheet
 
+
 def load_excel_samplesheet(template_sheet_filepath):
     df = pd.read_excel(template_sheet_filepath, skiprows=3,
                        sheet_name="Sample primer & index", engine='openpyxl')
+
+    # Make sure we have a sample column
+    sample_cols = ['Sample', 'Sample name']
+    if not any(col in df.columns for col in sample_cols):
+        raise ValueError("Sample column not found in sheet.")
+
+    # Coerce sample column to string
+    sample_col = next(col for col in sample_cols if col in df.columns)
+    df[sample_col] = df[sample_col].fillna('').astype(str)
+
     return df
+
 
 def load_template_sheet(template_sheet_filepath):
     df = pd.read_excel(template_sheet_filepath, skiprows=1, header=None, engine='openpyxl')
@@ -250,7 +279,7 @@ def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file,
     fcs_data = pd.read_csv(fcs_file, sep='\t') if fcs_file else None
     is_xlsx = spreadsheet_filepath.endswith('.xlsx')
     merged_data = pd.DataFrame()
-    
+
     if template_sheet_filepath and is_xlsx:
         raise Exception(
             '''
@@ -296,7 +325,6 @@ def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file,
         samples_colname = [col for col in spreadsheet.columns if
                            col.lower() == 'sample' or
                            col.lower() == 'sample name'][0]
-
         return pd.merge(spreadsheet, fcs_data,
                         left_on=['Plate#', 'Well position', samples_colname],
                         right_on=['Plate#', 'Well position', 'Sample name'],
