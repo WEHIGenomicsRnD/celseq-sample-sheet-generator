@@ -213,8 +213,9 @@ def plate_to_samplesheet(xlsx_file):
     # iterate through all sheets
     full_samplesheet = pd.DataFrame()
     for sheet in wb:
-        if not sheet.title.lower().startswith('lce') and not \
-            sheet.title.lower().startswith('prm'):
+        lce_sheet = sheet.title.lower().startswith('lce')
+        prm_sheet = sheet.title.lower().startswith('prm')
+        if not lce_sheet and not prm_sheet:
             print('Skipping sheet {}'.format(sheet.title))
             continue
 
