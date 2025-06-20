@@ -77,7 +77,7 @@ def process_files(plate_layout_path, fcs_files, template_sheet_path, primer_inde
 
             # TODO: generalise this code as we are also checking the template sheet
             # Make sure we have a sample column
-            sample_cols = ['Sample', 'Sample name']
+            sample_cols = ['Sample', 'Sample name', 'Sample type']
             if not any(col in primer_index_df.columns for col in sample_cols):
                 raise ValueError("Sample column not found in primer index sheet.")
 

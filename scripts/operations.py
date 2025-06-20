@@ -275,10 +275,21 @@ def load_excel_samplesheet(primer_index_path):
 
     # Step 4: Make sure we have a sample column and ceorce it to string
     sample_cols = ['sample', 'sample name', 'sample type']
-    if not any(col.lower() in df.columns for col in sample_cols):
+    matched_sample_col = next(
+        (col for col in df.columns if col.lower() in sample_cols),
+        None
+    )
+    if matched_sample_col is None:
         raise ValueError("Sample column not found in sheet.")
-    sample_col = next(col for col in sample_cols if col in df.columns)
-    df[sample_col] = df[sample_col].fillna('').astype(str)
+    df[matched_sample_col].fillna('').astype(str)
+
+    # Step 5: Rename sample column to 'Sample name'
+    df.rename(
+        columns={
+            matched_sample_col: 'Sample name'
+        },
+        inplace=True
+    )
 
     return df
 
