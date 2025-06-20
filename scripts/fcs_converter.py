@@ -3,7 +3,12 @@
 import argparse
 import pandas as pd
 from pathlib import Path
-from operations import plate_to_samplesheet, collate_fcs_files, merge_data_with_samplesheet
+from operations import (
+    plate_to_samplesheet,
+    collate_fcs_files,
+    merge_data_with_samplesheet,
+    load_excel_samplesheet
+)
 
 def create_temp_folder():
     """Create a temporary folder if it doesn't exist."""
@@ -68,7 +73,7 @@ def process_files(plate_layout_path, fcs_files, template_sheet_path, primer_inde
                                                 template_sheet_filepath=Path(template_sheet_path))
         if primer_index_provided:
             # Operation 4 (Optional): Add Primer Index to Comprehensive File
-            primer_index_df = pd.read_excel(primer_index_path, sheet_name='Sample primer & index', skiprows=3, engine='openpyxl')
+            primer_index_df = load_excel_samplesheet(primer_index_path)
 
             # TODO: generalise this code as we are also checking the template sheet
             # Make sure we have a sample column

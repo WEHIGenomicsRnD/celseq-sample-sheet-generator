@@ -238,16 +238,45 @@ def plate_to_samplesheet(xlsx_file):
     return full_samplesheet
 
 
-def load_excel_samplesheet(template_sheet_filepath):
-    df = pd.read_excel(template_sheet_filepath, skiprows=3,
-                       sheet_name="Sample primer & index", engine='openpyxl')
+def load_excel_samplesheet(primer_index_path):
+    """
+    Load index primer/sample sheet from Excel file.
+    """
+    # Step 1: Find sheet whose name starts with "sample primer"
+    wb = openpyxl.load_workbook(primer_index_path, read_only=True)
+    matching_sheet = None
+    for sheet_name in wb.sheetnames:
+        if sheet_name.lower().startswith('sample primer'):
+            matching_sheet = sheet_name
+            break
+    if not matching_sheet:
+        raise ValueError(
+            "No sheet starts with 'sample primer' in the workbook."
+        )
 
-    # Make sure we have a sample column
-    sample_cols = ['Sample', 'Sample name']
-    if not any(col in df.columns for col in sample_cols):
+    # Step 2: Find the row index where first cell starts with "Plate#"
+    ws = wb[matching_sheet]
+    skiprows = 0
+    for i, row in enumerate(ws.iter_rows(values_only=True)):
+        first_cell = str(row[0]) if row[0] is not None else ""
+        if first_cell.lower().startswith("plate#"):
+            skiprows = i
+            break
+    else:
+        raise ValueError("No row starts with 'Plate#' in the sheet.")
+
+    # Step 3: Load dataframe with pandas, skipping up to Plate# row
+    df = pd.read_excel(
+        primer_index_path,
+        sheet_name=matching_sheet,
+        skiprows=skiprows,
+        engine='openpyxl'
+    )
+
+    # Step 4: Make sure we have a sample column and ceorce it to string
+    sample_cols = ['sample', 'sample name', 'sample type']
+    if not any(col.lower() in df.columns for col in sample_cols):
         raise ValueError("Sample column not found in sheet.")
-
-    # Coerce sample column to string
     sample_col = next(col for col in sample_cols if col in df.columns)
     df[sample_col] = df[sample_col].fillna('').astype(str)
 
