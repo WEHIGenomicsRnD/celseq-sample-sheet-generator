@@ -11,6 +11,8 @@ homepage_info <- function() {
                     br(),
                     tags$b("Input:"), " To perform this operation only, upload a directory containing a sole Excel file with a plate layout with coloured wells.",
                     br(),
+                    actionLink("viewOp1", "See sample Template file"),
+                    br(),
                     tags$ul(
                       tags$li(
                         "The file name must include 'plate_layout' to be recognized.",
@@ -27,11 +29,7 @@ homepage_info <- function() {
                       tags$li(
                         "For downstream analysis, please make sure that the sample names match the sample names in your FCS files and primer spreadsheet."
                       ),
-                      tags$li(
-                      )
                     ),
-                    actionLink("viewOp1", "See sample Template file"),
-                    br(),
                     tags$b("Output:"), " A sample sheet containing the following columns: plate number, well position, sample name."
                 )
             ),
