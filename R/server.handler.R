@@ -175,20 +175,44 @@ data_processing_handler <- function(input, output, session, uploadedFilePaths) {
                                shQuote(outputFilePath))
         }
         
-        # Execute the command and capture output
-        print(command)
-        command_output <- system(command, intern = TRUE, ignore.stderr = FALSE, wait = TRUE)
-        print(command_output)
+        # Execute the command and capture output, alert on error if python script fails
+        command <- paste0(command, " 2>&1")
+        tryCatch({
+            print(paste("Executing command:", command))
+            command_output <- system(command, intern = TRUE)
+            exit_status <- attr(command_output, "status")
+            print(command_output)
 
-        # Hide processing hint
-        shinyjs::hide("spinner")
-        
-        # Now, check if the processed data file was successfully created by the command
-        processedData(read.csv(outputFilePath, stringsAsFactors = FALSE))
+            if (!is.null(exit_status) && exit_status != 0) {
+                shinyalert::shinyalert(
+                    "Error",
+                    paste("Python script failed:\n", paste(command_output, collapse = "\n")),
+                    type = "error"
+                )
+                shinyjs::hide("spinner")
+                return(NULL)
+            }
 
-        # Display completion popup
-        shinyalert::shinyalert("Success", "Data processing completed successfully!", type = "success")
+            if (!file.exists(outputFilePath)) {
+                shinyalert::shinyalert(
+                    "Error",
+                    "The output file was not created. Please check your input files.",
+                    type = "error"
+                )
+                shinyjs::hide("spinner")
+                return(NULL)
+            }
 
+            # Now, check if the processed data file was successfully created by the command
+            processedData(read.csv(outputFilePath, stringsAsFactors = FALSE))
+            shinyalert::shinyalert("Success", "Data processing completed successfully!", type = "success")
+            },
+            error = function(e) {
+                shinyalert::shinyalert("R Error", e$message, type = "error")
+                shinyjs::hide("spinner")
+                return(NULL)
+            }
+        )
     })
     return(processedData)
 }
