@@ -83,6 +83,7 @@ def get_plate_and_sample_from_filepath(fcs_filepath):
         assert len(sample_name) > 1, \
             'Sample name not found in filename {}'.format(filename)
         sample_name = sample_name[1]
+        plate = plate.split('_')[0]  # remove the sample name from plate name
     else:
         # For LCE plates, sample name is between INX_ and plate name
         sample_start_index = filename.find('INX_')
@@ -325,7 +326,7 @@ def merge_data_with_samplesheet(spreadsheet_filepath, fcs_file,
         raise Exception(
             '''
             Cannot merge template sheet with xlsx file.
-#            Please upload a tsv file with plate, sample and well positions.
+            Please upload a tsv file with plate, sample and well positions.
             ''')
     elif template_sheet_filepath:
 
