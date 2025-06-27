@@ -29,14 +29,16 @@ install_python_packages(PYTHON_DEPENDENCIES)
 py_config()
 
 source("R/server.handler.R")
+source("R/session_utils.R")
 
 # Server function
 shinyServer <- function(input, output, session) {
+    initialise_session(session)
+
     thumbnail_image_handler(input, output, session)
     
     folder_upload_progress_bar(input, output, session)
     uploadedFilePaths <- data_upload_handler(input, output, session)
-
 
     processedData <- data_processing_handler(input, output, session, uploadedFilePaths)
     

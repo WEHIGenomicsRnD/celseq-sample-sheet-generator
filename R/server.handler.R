@@ -56,11 +56,14 @@ data_download_handler <- function(input, output, session, processedData) {
 }
 
 data_upload_handler <- function(input, output, session) {
-    # Ensure the "temp/data" directory exists
-    if (!dir.exists("temp/data")) {
-        dir.create("temp/data", recursive = TRUE)
-    }
+    # Create session-specific directories instead of shared directories
+    session_temp_dir <- get_session_path(session, "temp/data")
     
+    # Ensure the session-specific directory exists
+    if (!dir.exists(session_temp_dir)) {
+        dir.create(session_temp_dir, recursive = TRUE)
+    }
+
     # Initialize reactive values to store uploaded file paths and names
     uploadedFilePaths <- reactiveValues(
         plate_layout = list(path = "", name = ""),
@@ -83,7 +86,7 @@ data_upload_handler <- function(input, output, session) {
                     next
                 }
 
-                destPath <- paste0("temp/data/", input$folder_input$name[i])
+                destPath <- file.path(session_temp_dir, input$folder_input$name[i])
                 file.copy(input$folder_input$datapath[i], destPath)
                 
                 # Categorize and store file info based on naming convention or extension
@@ -92,7 +95,7 @@ data_upload_handler <- function(input, output, session) {
                     cat(sprintf("Plate layout uploaded: %s\n", destPath))
                 } else if (grepl("\\.fcs$", input$folder_input$name[i], ignore.case = TRUE)) {
                     # Store the FCS file name first
-                    fcs_file_name <- paste0("temp/data/", input$folder_input$name[i])
+                    fcs_file_name <- paste0(session_temp_dir, input$folder_input$name[i])
                     
                     # Append the modified information with path and name to the fcs_files_info list
                     fcs_files_info <- c(fcs_files_info, fcs_file_name)
@@ -123,6 +126,9 @@ raise_error <- function(errorMessage) {
 }
 
 data_processing_handler <- function(input, output, session, uploadedFilePaths) {
+    # Get session-specific temporary directory
+    session_temp_dir <- get_session_path(session, "temp/data")
+    
     processedData <- reactiveVal(NULL)  # To store the result of processing
     
     # Listen for the 'process' button click
@@ -157,7 +163,7 @@ data_processing_handler <- function(input, output, session, uploadedFilePaths) {
         # NOTE: we should keep this extensible so that we can also handle a
         # scenario where we only have FCS provided and we want to merge them
 
-        outputFilePath <- tempfile(fileext = ".csv", tmpdir = "temp/data")
+        outputFilePath <- tempfile(fileext = ".csv", tmpdir = session_temp_dir)
 
         if (!fcs_files_present & !template_sheet_present & !plate_layout_present) {
             raise_error("All required files (i.e. FCS, plate_layout, template) are missing!")

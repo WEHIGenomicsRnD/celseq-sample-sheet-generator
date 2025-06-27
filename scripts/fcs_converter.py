@@ -50,6 +50,7 @@ def process_files(plate_layout_path, fcs_files, template_sheet_path, primer_inde
     if plate_layout_provided:
         # Operation 1: Create Sample Sheet from Plate Layout
         sample_sheet_df = plate_to_samplesheet(Path(plate_layout_path))
+        # TODO: output file needs to go in session directory
         sample_sheet_output_path = 'temp/op1_plate_layout_to_spreadsheet.tsv'
         sample_sheet_df.to_csv(sample_sheet_output_path, sep='\t', index=False)
     elif not template_sheet_provided and not primer_index_provided:
@@ -63,6 +64,7 @@ def process_files(plate_layout_path, fcs_files, template_sheet_path, primer_inde
     if fcs_files_provided:
         # Operation 2: Combine FCS Files into One Document
         collated_fcs_df = collate_fcs_files(fcs_files.split(' '), "")
+        # TODO: output file needs to go in session directory
         collated_fcs_output_path = 'temp/op2_collate_fcs_files.tsv'
         collated_fcs_df.to_csv(collated_fcs_output_path, sep='\t', index=False)
 
