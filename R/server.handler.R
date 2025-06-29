@@ -155,13 +155,6 @@ data_processing_handler <- function(input, output, session, uploadedFilePaths) {
         if (uploadedFilePaths$plate_layout$path != "") {
             plate_layout_present <- TRUE
         }
-      
-        # TODO: here we need to split between two functionalties:
-        # 1. if ONLY the plate layout is provided, we generate a plate layout
-        #    table
-        # 2. if all other files are provided, functionality is as before
-        # NOTE: we should keep this extensible so that we can also handle a
-        # scenario where we only have FCS provided and we want to merge them
 
         outputFilePath <- tempfile(fileext = ".csv", tmpdir = session_temp_dir)
 

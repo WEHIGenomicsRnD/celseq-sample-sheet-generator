@@ -31,10 +31,6 @@ initialise_session <- function(session) {
 cleanup_session <- function(session_id) {
   session_temp_dir <- file.path("temp/data", session_id)
   
-  if (dir.exists(session_data_dir)) {
-    unlink(session_data_dir, recursive = TRUE)
-  }
-  
   if (dir.exists(session_temp_dir)) {
     unlink(session_temp_dir, recursive = TRUE)
   }
