@@ -45,7 +45,7 @@ homepage_info <- function() {
                         "The FCS file names must not contain any spaces and have the .fcs file extension."
                       ),
                       tags$li(
-                        "For LCE plates, the sample name must be in the file name, between 'INX' and the plate name, separated by an underscore (e.g., '01Jan25_INX_Sample1_FCE123.fcs').",
+                        "For LCE plates, the sample name must be in the file name, between 'INX' and the plate name, separated by an underscore (e.g., '01Jan25_INX_Sample1_LCE123.fcs').",
                       ),
                       tags$li(
                         "For PRM plates, the sample name must be after the plate name, separated by an underscore (e.g., '01Jan25_INX_PRM123_Sample1.fcs').",
