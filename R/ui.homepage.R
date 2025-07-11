@@ -62,6 +62,7 @@ homepage_info <- function() {
                     tags$b("Input:"), " To perform this operation, upload a directory containing one or more FCS files with a template spreadsheet or ready-made sample sheet.",
                     br(),
                     actionLink("viewOp3", "See sample Template file"),
+                    br(),
                     actionLink("viewOp4", "See sample Sample Sheet file"),
                     br(),
                     tags$ul(
@@ -72,7 +73,7 @@ homepage_info <- function() {
                         "If providing a template spreadsheet, it must be in Excel format and have 'template_sheet' in the file name.",
                       ),
                       tags$li(
-                        "If providing a ready-made sample sheet, it must be in Excel format and have 'primer_template' in the file name.",
+                        "If providing a ready-made sample sheet, it must be in Excel format and have 'primer_index' in the file name.",
                       ),
                       tags$li(
                         "The template or sample sheet must contain a sheet that starts with 'sample primer'. This sheet's first column must be 'Plate#'. It also has to contain a column called 'Well position' and one of 'Sample', 'Sample name' or 'Sample type'."
