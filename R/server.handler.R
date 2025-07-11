@@ -95,7 +95,7 @@ data_upload_handler <- function(input, output, session) {
                     cat(sprintf("Plate layout uploaded: %s\n", destPath))
                 } else if (grepl("\\.fcs$", input$folder_input$name[i], ignore.case = TRUE)) {
                     # Store the FCS file name first
-                    fcs_file_name <- paste0(session_temp_dir, input$folder_input$name[i])
+                    fcs_file_name <- file.path(session_temp_dir, input$folder_input$name[i])
                     
                     # Append the modified information with path and name to the fcs_files_info list
                     fcs_files_info <- c(fcs_files_info, fcs_file_name)
